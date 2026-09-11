@@ -225,18 +225,19 @@ h3,
   object-fit: cover;
   pointer-events: none;
   z-index: 0;
+  filter: contrast(1.05) saturate(1.12) brightness(0.96);
 }
 
-/* Layer 1: soft left-to-right cream/white gradient for text readability */
+/* Layer 1: reduced subtle gradient for crisp text readability without white haze */
 .hero-overlay-gradient {
   position: absolute;
   inset: 0;
   background: linear-gradient(
     90deg,
-    rgba(248, 250, 246, 0.98) 0%,
-    rgba(248, 250, 246, 0.91) 34%,
-    rgba(248, 250, 246, 0.48) 60%,
-    rgba(248, 250, 246, 0.10) 100%
+    rgba(247, 249, 245, 0.68) 0%,
+    rgba(247, 249, 245, 0.44) 34%,
+    rgba(247, 249, 245, 0.12) 58%,
+    transparent 82%
   );
   z-index: 1;
   pointer-events: none;
@@ -248,8 +249,8 @@ h3,
   inset: 0;
   background: radial-gradient(
     circle at 80% 45%,
-    rgba(82, 183, 136, 0.18) 0%,
-    rgba(82, 183, 136, 0.05) 50%,
+    rgba(82, 183, 136, 0.15) 0%,
+    rgba(82, 183, 136, 0.04) 50%,
     transparent 75%
   );
   z-index: 2;
@@ -263,7 +264,7 @@ h3,
   background: radial-gradient(
     circle at 50% 50%,
     transparent 65%,
-    rgba(18, 55, 42, 0.10) 100%
+    rgba(18, 55, 42, 0.12) 100%
   );
   z-index: 2;
   pointer-events: none;
@@ -275,8 +276,8 @@ h3,
   bottom: 0;
   left: 0;
   right: 0;
-  height: 180px;
-  background: linear-gradient(to bottom, transparent 10%, var(--bg) 100%);
+  height: 120px;
+  background: linear-gradient(to bottom, transparent 35%, var(--bg) 100%);
   z-index: 2;
   pointer-events: none;
 }

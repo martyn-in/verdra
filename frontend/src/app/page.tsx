@@ -365,6 +365,11 @@ function Landing({
           preload="auto"
           poster="/images/verdra-hero-poster.jpg"
           className="hero-bg-video"
+          ref={(el) => {
+            if (el) {
+              el.playbackRate = 0.8;
+            }
+          }}
         >
           <source src="/videos/verdra-field-hero.mp4" type="video/mp4" />
         </video>
