@@ -400,16 +400,6 @@ function Landing({
 
         <section className="hero container">
           <div className="hero-copy">
-            <motion.div
-              className="eyebrow"
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.6, ease: "easeOut" }}
-            >
-              <Sparkles size={15} />
-              AI-POWERED CROP HEALTH INTELLIGENCE
-            </motion.div>
-
             <motion.h1
               initial={{ opacity: 0, y: 16 }}
               animate={{ opacity: 1, y: 0 }}
@@ -446,52 +436,6 @@ function Landing({
               <a className="button secondary large" href="#how">
                 How It Works
               </a>
-            </motion.div>
-
-            <motion.div
-              className="trust-row"
-              initial="hidden"
-              animate="visible"
-              variants={{
-                hidden: { opacity: 0 },
-                visible: {
-                  opacity: 1,
-                  transition: {
-                    staggerChildren: 0.1,
-                    delayChildren: 0.4,
-                  },
-                },
-              }}
-            >
-              <motion.span
-                variants={{
-                  hidden: { opacity: 0, y: 8 },
-                  visible: { opacity: 1, y: 0, transition: { duration: 0.5, ease: "easeOut" } },
-                }}
-              >
-                <ShieldCheck size={18} />
-                Real model inference
-              </motion.span>
-
-              <motion.span
-                variants={{
-                  hidden: { opacity: 0, y: 8 },
-                  visible: { opacity: 1, y: 0, transition: { duration: 0.5, ease: "easeOut" } },
-                }}
-              >
-                <Eye size={18} />
-                Explainable Grad-CAM
-              </motion.span>
-
-              <motion.span
-                variants={{
-                  hidden: { opacity: 0, y: 8 },
-                  visible: { opacity: 1, y: 0, transition: { duration: 0.5, ease: "easeOut" } },
-                }}
-              >
-                <CloudRain size={18} />
-                Weather-aware spread risk
-              </motion.span>
             </motion.div>
           </div>
         </section>
