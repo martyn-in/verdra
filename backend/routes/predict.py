@@ -121,7 +121,7 @@ async def predict_disease(
 
     # 6. Step 4: Run REAL crop disease classifier only if valid_leaf == true
     try:
-        result = model_service.predict(image_bytes, top_k=3)
+        result = model_service.predict(image_bytes, crop=crop, top_k=3)
     except RuntimeError as re:
         logger.error(f"Model error: {re}")
         raise HTTPException(status_code=503, detail=str(re))

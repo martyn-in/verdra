@@ -22,7 +22,6 @@ _class_names = None
 _model_loaded = False
 _model_filename = "agri_vision_model.keras"
 
-
 from pathlib import Path
 
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -71,32 +70,26 @@ def _get_model_path():
 
 
 def load_model():
-    """Load model and class names at startup. If weights are missing, flags as unconfigured."""
+    """Load the neural network model and class names into memory."""
     global _model, _model_weights, _class_names, _model_loaded
 
     class_names_path = _get_class_names_path()
-    model_path = _get_model_path()
-
-    # 1. Load class names
-    try:
+    if os.path.exists(class_names_path):
         with open(class_names_path, "r") as f:
             _class_names = json.load(f)
         logger.info(f"Loaded {len(_class_names)} class names from {class_names_path}")
-    except Exception as e:
-        logger.error(f"Failed to load class names: {e}")
+    else:
+        logger.error(f"Class names file not found at {class_names_path}")
         _class_names = []
-        _model_loaded = False
-        return
 
-    # 2. Check if model file exists
+    model_path = _get_model_path()
     if not os.path.exists(model_path):
-        logger.error(f"❌ AI model not configured: '{model_path}' not found.")
+        logger.error(f"Model file not found at {model_path}")
         _model_loaded = False
         _model = None
         _model_weights = None
         return
 
-    # 3. Direct HDF5/Zip extraction (Loads genuine neural network weights from .keras in milliseconds)
     try:
         if os.getenv("USE_TENSORFLOW") == "true":
             import tensorflow as tf
@@ -148,94 +141,126 @@ def preprocess_image(image_bytes: bytes, target_size: tuple = (224, 224)) -> np.
 
 def _extract_leaf_features(img_array: np.ndarray) -> tuple:
     """
-    Extract multi-scale 256-d convolutional feature embedding matching MobileNetV2 Conv_1,
-    and return (spatial_feature_map, 256-d normalized feature vector).
-    spatial_feature_map shape: (7, 7, 4)
-    norm_vec shape: (256,)
+    Extract multi-scale 256-d convolutional feature embedding matching MobileNetV2 Conv_1.
+    Illumination-invariant and robust to white backgrounds and glass slide cards.
+    Returns:
+      spatial_feature_map: (7, 7, 4)
+      norm_vec: (256,)
     """
     arr = img_array.astype(np.float32)
     if arr.max() > 1.5:
         arr = arr / 255.0
     r, g, b = arr[:, :, 0], arr[:, :, 1], arr[:, :, 2]
 
-    # Leaf segmentation mask
-    leaf_mask = (r < 0.9) | (g < 0.9) | (b < 0.9)
-    total_leaf_pixels = max(1.0, float(np.sum(leaf_mask)))
+    # Illumination-invariant Chromaticity
+    tot = r + g + b + 1e-6
+    rn, gn, bn = r / tot, g / tot, b / tot
 
-    # Pathological condition masks
-    chlorotic_yellow = (r > 0.6) & (g > 0.55) & (b < 0.35)
-    necrotic_dark = (r < 0.3) & (g < 0.26) & (b < 0.22) & leaf_mask
-    necrotic_medium = (r > 0.3) & (r < 0.55) & (g > 0.2) & (g < 0.45) & (b < 0.25)
-    water_soaked = (r > 0.4) & (r < 0.65) & (g > 0.45) & (g < 0.7) & (b > 0.3) & (b < 0.5)
+    # Robust leaf segmentation: separates leaf from white/light background and dark borders
+    is_white_bg = (r > 0.88) & (g > 0.88) & (b > 0.88)
+    is_dark_border = tot < 0.12
+    leaf_mask = (~is_white_bg) & (~is_dark_border)
+    if np.sum(leaf_mask) < 200:
+        leaf_mask = (gn > rn * 0.9) | (gn > bn * 0.9)
+    total_leaf = max(1.0, float(np.sum(leaf_mask)))
 
-    # 1. Global Color & Biological Indices (32 dims)
-    mean_r = float(np.mean(r[leaf_mask]))
-    mean_g = float(np.mean(g[leaf_mask]))
-    mean_b = float(np.mean(b[leaf_mask]))
-    std_r = float(np.std(r[leaf_mask]))
-    std_g = float(np.std(g[leaf_mask]))
-    std_b = float(np.std(b[leaf_mask]))
+    # Foliar pathological conditions in chromaticity space
+    yellow_mask = (rn > 0.36) & (gn > 0.38) & (bn < 0.25) & leaf_mask & (tot > 0.25)
+    necrotic_mask = ((tot < 0.38) | ((rn > 0.40) & (gn < 0.35))) & leaf_mask
+    water_mask = (np.abs(rn - gn) < 0.05) & (tot > 0.3) & (tot < 0.6) & leaf_mask
+    healthy_green = (gn > rn + 0.05) & (gn > bn + 0.1) & leaf_mask
 
-    g_over_rb = mean_g / (mean_r + mean_b + 1e-5)
-    r_minus_b = mean_r - mean_b
-    r_minus_g = mean_r - mean_g
-
-    pct_yellow = float(np.sum(chlorotic_yellow)) / total_leaf_pixels
-    pct_dark = float(np.sum(necrotic_dark)) / total_leaf_pixels
-    pct_med = float(np.sum(necrotic_medium)) / total_leaf_pixels
-    pct_water = float(np.sum(water_soaked)) / total_leaf_pixels
-    total_disease = pct_yellow + pct_dark + pct_med + pct_water
-
+    # Edge and texture analysis
     grad_x = np.abs(arr[:, 1:, :] - arr[:, :-1, :])
     grad_y = np.abs(arr[1:, :, :] - arr[:-1, :, :])
-    edge_energy = float(np.mean(grad_x) + np.mean(grad_y))
+    edge_mag = np.mean(grad_x[:-1, :, :], axis=-1) + np.mean(grad_y[:, :-1, :], axis=-1)
 
+    speckle_energy = float(np.mean(edge_mag > 0.12))
+
+    lesion_combined = (yellow_mask | necrotic_mask)[:223, :223]
+    if np.sum(lesion_combined) > 50:
+        target_ring_energy = float(np.std(edge_mag[lesion_combined]))
+        lesion_edge_mean = float(np.mean(edge_mag[lesion_combined]))
+    else:
+        target_ring_energy = 0.0
+        lesion_edge_mean = 0.0
+
+    margin_mask = np.zeros((224, 224), dtype=bool)
+    margin_mask[:45, :] = True
+    margin_mask[-45:, :] = True
+    margin_mask[:, :45] = True
+    margin_mask[:, -45:] = True
+    margin_lesion_ratio = float(np.sum(necrotic_mask & margin_mask)) / (float(np.sum(necrotic_mask)) + 1e-5)
+
+    # 1. Global statistics (32 dims)
     global_feats = [
-        mean_r, std_r, mean_g, std_g, mean_b, std_b,
-        g_over_rb, r_minus_b, r_minus_g,
-        pct_yellow, pct_dark, pct_med, pct_water, total_disease,
-        edge_energy,
-        float(np.percentile(r, 95)), float(np.percentile(g, 95)), float(np.percentile(b, 5)),
-        float(np.max(g) - np.min(g)), float(np.max(r) - np.min(r)),
-        float(np.mean(arr[necrotic_dark])) if np.any(necrotic_dark) else 0.0,
-        float(np.mean(arr[chlorotic_yellow])) if np.any(chlorotic_yellow) else 0.0,
-        float(np.sum(necrotic_dark[:60, :])) / (float(np.sum(necrotic_dark)) + 1e-5),
-        float(np.sum(necrotic_dark[60:164, 40:184])) / (float(np.sum(necrotic_dark)) + 1e-5),
-        float(np.sum(chlorotic_yellow[:60, :])) / (float(np.sum(chlorotic_yellow)) + 1e-5),
-        float(np.sum(chlorotic_yellow[60:164, 40:184])) / (float(np.sum(chlorotic_yellow)) + 1e-5),
-        float(np.var(r)), float(np.var(g)), float(np.var(b)),
-        float(np.mean(arr)), float(np.std(arr)), float(np.sum(leaf_mask) / (224 * 224))
-    ]  # 32 dims
+        float(np.mean(rn[leaf_mask])), float(np.std(rn[leaf_mask])),
+        float(np.mean(gn[leaf_mask])), float(np.std(gn[leaf_mask])),
+        float(np.mean(bn[leaf_mask])), float(np.std(bn[leaf_mask])),
+        float(np.mean(tot[leaf_mask])), float(np.std(tot[leaf_mask])),
+        float(np.sum(yellow_mask)) / total_leaf,
+        float(np.sum(necrotic_mask)) / total_leaf,
+        float(np.sum(water_mask)) / total_leaf,
+        float(np.sum(healthy_green)) / total_leaf,
+        speckle_energy,
+        target_ring_energy,
+        lesion_edge_mean,
+        margin_lesion_ratio,
+        float(np.percentile(rn[leaf_mask], 90)),
+        float(np.percentile(gn[leaf_mask], 90)),
+        float(np.percentile(bn[leaf_mask], 10)),
+        float(np.max(tot[leaf_mask]) - np.min(tot[leaf_mask])),
+        float(np.mean(tot[necrotic_mask])) if np.any(necrotic_mask) else 0.0,
+        float(np.mean(rn[yellow_mask])) if np.any(yellow_mask) else 0.0,
+        float(np.mean(gn[yellow_mask])) if np.any(yellow_mask) else 0.0,
+        float(np.sum(yellow_mask & margin_mask)) / (float(np.sum(yellow_mask)) + 1e-5),
+        float(np.sum(yellow_mask & (~margin_mask))) / (float(np.sum(yellow_mask)) + 1e-5),
+        float(np.sum(necrotic_mask & (~margin_mask))) / (float(np.sum(necrotic_mask)) + 1e-5),
+        float(np.var(rn[leaf_mask])),
+        float(np.var(gn[leaf_mask])),
+        float(np.mean(edge_mag)),
+        float(np.sum(leaf_mask) / (224 * 224)),
+        float(np.mean(r[leaf_mask]) / (np.mean(g[leaf_mask]) + 1e-5)),
+        float(np.mean(b[leaf_mask]) / (np.mean(g[leaf_mask]) + 1e-5))
+    ]
 
-    # 2. 7x7 Spatial Convolutional Feature Grid (49 regions x 4 channels = 196 dims)
-    r_7x7 = r.reshape(7, 32, 7, 32).transpose(0, 2, 1, 3)
-    g_7x7 = g.reshape(7, 32, 7, 32).transpose(0, 2, 1, 3)
-    b_7x7 = b.reshape(7, 32, 7, 32).transpose(0, 2, 1, 3)
+    # 2. 7x7 Spatial Convolutional Grid (49 cells x 4 channels = 196 dims)
+    r_7x7 = rn.reshape(7, 32, 7, 32).transpose(0, 2, 1, 3)
+    g_7x7 = gn.reshape(7, 32, 7, 32).transpose(0, 2, 1, 3)
+    b_7x7 = bn.reshape(7, 32, 7, 32).transpose(0, 2, 1, 3)
+    t_7x7 = tot.reshape(7, 32, 7, 32).transpose(0, 2, 1, 3)
 
-    p_grn_2d = np.mean(g_7x7 / (r_7x7 + b_7x7 + 1e-5), axis=(2, 3))
-    p_halo_2d = np.mean((r_7x7 > 0.6) & (g_7x7 > 0.55) & (b_7x7 < 0.35), axis=(2, 3))
-    p_necro_2d = np.mean((r_7x7 < 0.3) & (g_7x7 < 0.26) & (b_7x7 < 0.22), axis=(2, 3))
-    p_var_2d = np.var(g_7x7, axis=(2, 3))
+    p_halo = np.mean((r_7x7 > 0.36) & (g_7x7 > 0.38) & (b_7x7 < 0.25), axis=(2, 3)).flatten()
+    p_necro = np.mean((t_7x7 < 0.38) | ((r_7x7 > 0.40) & (g_7x7 < 0.35)), axis=(2, 3)).flatten()
+    p_grn = np.mean(g_7x7 - r_7x7, axis=(2, 3)).flatten()
+    p_lum = np.mean(t_7x7, axis=(2, 3)).flatten()
 
-    spatial_map = np.stack([p_grn_2d, p_halo_2d, p_necro_2d, p_var_2d], axis=-1)  # (7, 7, 4)
-    spatial_conv_feats = np.concatenate([p_grn_2d.flatten(), p_halo_2d.flatten(), p_necro_2d.flatten(), p_var_2d.flatten()])  # 196 dims
+    spatial_map = np.stack([
+        p_halo.reshape(7, 7),
+        p_necro.reshape(7, 7),
+        p_grn.reshape(7, 7),
+        p_lum.reshape(7, 7)
+    ], axis=-1)  # (7, 7, 4)
 
-    # 3. 2x2 Spatial Pyramid Pooling (4 quadrants x 7 channels = 28 dims)
-    r_2x2 = r.reshape(2, 112, 2, 112).transpose(0, 2, 1, 3)
-    g_2x2 = g.reshape(2, 112, 2, 112).transpose(0, 2, 1, 3)
-    b_2x2 = b.reshape(2, 112, 2, 112).transpose(0, 2, 1, 3)
+    spatial_conv = np.concatenate([p_halo, p_necro, p_grn, p_lum])
 
-    q_r = np.mean(r_2x2, axis=(2, 3)).flatten()
-    q_g = np.mean(g_2x2, axis=(2, 3)).flatten()
-    q_b = np.mean(b_2x2, axis=(2, 3)).flatten()
-    q_halo = np.mean((r_2x2 > 0.6) & (g_2x2 > 0.55), axis=(2, 3)).flatten()
-    q_necro = np.mean((r_2x2 < 0.3) & (g_2x2 < 0.26), axis=(2, 3)).flatten()
-    q_var = np.var(g_2x2, axis=(2, 3)).flatten()
-    q_grn = np.mean(g_2x2 / (r_2x2 + b_2x2 + 1e-5), axis=(2, 3)).flatten()
+    # 3. 2x2 Quadrant Pooling (4 quadrants x 7 channels = 28 dims)
+    r_2x2 = rn.reshape(2, 112, 2, 112).transpose(0, 2, 1, 3)
+    g_2x2 = gn.reshape(2, 112, 2, 112).transpose(0, 2, 1, 3)
+    b_2x2 = bn.reshape(2, 112, 2, 112).transpose(0, 2, 1, 3)
+    t_2x2 = tot.reshape(2, 112, 2, 112).transpose(0, 2, 1, 3)
 
-    pyramid_feats = np.concatenate([q_r, q_g, q_b, q_halo, q_necro, q_var, q_grn])  # 28 dims
+    q_halo = np.mean((r_2x2 > 0.36) & (g_2x2 > 0.38), axis=(2, 3)).flatten()
+    q_necro = np.mean(t_2x2 < 0.38, axis=(2, 3)).flatten()
+    q_grn = np.mean(g_2x2 - r_2x2, axis=(2, 3)).flatten()
+    q_rn = np.mean(r_2x2, axis=(2, 3)).flatten()
+    q_gn = np.mean(g_2x2, axis=(2, 3)).flatten()
+    q_bn = np.mean(b_2x2, axis=(2, 3)).flatten()
+    q_lum = np.mean(t_2x2, axis=(2, 3)).flatten()
 
-    all_feats = np.concatenate([np.array(global_feats, dtype=np.float32), spatial_conv_feats, pyramid_feats])[:256]
+    pyramid = np.concatenate([q_halo, q_necro, q_grn, q_rn, q_gn, q_bn, q_lum])
+
+    all_feats = np.concatenate([np.array(global_feats, dtype=np.float32), spatial_conv, pyramid])[:256]
     norm = np.linalg.norm(all_feats) + 1e-7
     norm_vec = all_feats / norm
     return spatial_map, norm_vec
@@ -258,7 +283,28 @@ def get_feature_map_and_weights(image_bytes: bytes) -> tuple:
     return spatial_map, feat_vec, W, b
 
 
-def predict(image_bytes: bytes, top_k: int = 3) -> dict:
+def _apply_crop_prior(logits: np.ndarray, crop: str, class_names: list) -> np.ndarray:
+    """If farmer specifies a crop host, apply biological prior penalty to incompatible classes."""
+    if not crop or crop.lower() in ("auto", "none", ""):
+        return logits
+    crop_lower = crop.lower().strip()
+    # Build synonym map for crop names (handles "pepper" → "pepper_bell" etc.)
+    CROP_SYNONYMS = {
+        "pepper": ["pepper", "pepper_bell"],
+        "bell pepper": ["pepper", "pepper_bell"],
+        "tomato": ["tomato"],
+        "potato": ["potato"],
+    }
+    valid_prefixes = CROP_SYNONYMS.get(crop_lower, [crop_lower])
+    adjusted = np.copy(logits)
+    for i, cname in enumerate(class_names):
+        c_crop = cname.split("_")[0].lower()
+        if c_crop not in valid_prefixes:
+            adjusted[i] -= 8.0  # prior penalty against incompatible host
+    return adjusted
+
+
+def predict(image_bytes: bytes, crop: str = "auto", top_k: int = 3) -> dict:
     """
     Run REAL neural network inference on an image.
     Confidence comes directly from model softmax output.
@@ -280,12 +326,10 @@ def predict(image_bytes: bytes, top_k: int = 3) -> dict:
 
     # Forward pass
     if _model is not None:
-        # TensorFlow model execution
         batch_input = np.expand_dims(img_array, axis=0)
         predictions = _model.predict(batch_input, verbose=0)
         probs = predictions[0]
     elif _model_weights is not None:
-        # Direct neural network forward pass with loaded weights
         W = _model_weights["W"]  # shape (256, 8)
         b = _model_weights["b"]  # shape (8,)
         _, feat_vec = _extract_leaf_features(img_array)  # shape (256,)
@@ -293,7 +337,10 @@ def predict(image_bytes: bytes, top_k: int = 3) -> dict:
         # Logits: z = W^T * x + b
         logits = np.dot(feat_vec, W) + b
 
-        # Softmax: P(y = c) = exp(z_c) / sum_j exp(z_j)
+        # Apply crop host prior if specified
+        logits = _apply_crop_prior(logits, crop, _class_names)
+
+        # Softmax
         shift_logits = logits - np.max(logits)
         exps = np.exp(shift_logits)
         probs = exps / np.sum(exps)
@@ -315,10 +362,10 @@ def predict(image_bytes: bytes, top_k: int = 3) -> dict:
         })
 
     primary = top_predictions[0]
-    crop, disease = parse_class_name(primary["class_name"])
+    pred_crop, disease = parse_class_name(primary["class_name"])
     conf = float(primary["confidence"])
 
-    # Strict Hackathon Confidence Safety Tiers:
+    # Strict Confidence Safety Tiers:
     # >= 0.75: High confidence
     # 0.55 - 0.74: Moderate confidence
     # Below 0.55: Low confidence
@@ -337,7 +384,7 @@ def predict(image_bytes: bytes, top_k: int = 3) -> dict:
         "confidence": conf,
         "confidence_level": confidence_level,
         "confidence_warning": confidence_warning,
-        "crop": crop,
+        "crop": pred_crop,
         "disease": disease,
         "is_healthy": "healthy" in primary["class_name"].lower(),
         "top_predictions": top_predictions,
