@@ -39,6 +39,7 @@ import {
   useRef,
   useState,
 } from "react";
+import { motion } from "framer-motion";
 
 import {
   API_URL,
@@ -353,107 +354,189 @@ function Landing({
 }) {
   return (
     <main className="landing">
-      <header className="landing-nav container">
-        <Logo />
-
-        <nav className="landing-links">
-          <a href="#how">How It Works</a>
-          <a href="#crops">Supported Crops</a>
-          <a href="#features">Features</a>
-          <button
-            className="text-button"
-            onClick={() => navigate("dashboard")}
-          >
-            Dashboard
-          </button>
-        </nav>
-
-        <button
-          className="button primary"
-          onClick={() => navigate("scan")}
+      {/* ===== CINEMATIC HERO SECTION ===== */}
+      <div className="hero-cinematic-wrapper">
+        {/* Background Looping Video with graceful CSS fallback */}
+        <video
+          autoPlay
+          muted
+          loop
+          playsInline
+          preload="metadata"
+          poster="/images/verdra-hero-poster.jpg"
+          className="hero-bg-video"
         >
-          <ScanLine size={18} />
-          Scan Your Crop
-        </button>
-      </header>
+          <source src="/videos/verdra-field-hero.webm" type="video/webm" />
+          <source src="/videos/verdra-field-hero.mp4" type="video/mp4" />
+        </video>
 
-      <section className="hero container">
-        <div className="hero-copy">
-          <div className="eyebrow">
-            <Sparkles size={15} />
-            AI-POWERED CROP HEALTH INTELLIGENCE
-          </div>
+        {/* Layer 1: soft left-to-right cream/white gradient for text readability */}
+        <div className="hero-overlay-gradient" />
 
-          <h1>
-            See Crop Disease
-            <span> Before It Spreads.</span>
-          </h1>
+        {/* Layer 2: very subtle green radial glow toward the right side */}
+        <div className="hero-overlay-glow" />
 
-          <p>
-            Verdra uses deep learning to identify crop diseases from leaf
-            images, evaluate environmental conditions and provide actionable
-            crop-care recommendations.
-          </p>
+        {/* Layer 3: soft vignette around edges */}
+        <div className="hero-overlay-vignette" />
 
-          <div className="hero-actions">
+        <header className="landing-nav container" style={{ position: "relative", zIndex: 3 }}>
+          <Logo />
+
+          <nav className="landing-links">
+            <a href="#how">How It Works</a>
+            <a href="#crops">Supported Crops</a>
+            <a href="#features">Features</a>
             <button
-              className="button primary large"
-              onClick={() => navigate("scan")}
+              className="text-button"
+              onClick={() => navigate("dashboard")}
             >
-              Scan Your Crop
-              <ArrowRight size={18} />
+              Dashboard
             </button>
+          </nav>
 
-            <a className="button secondary large" href="#how">
-              How It Works
-            </a>
+          <button
+            className="button primary"
+            onClick={() => navigate("scan")}
+          >
+            <ScanLine size={18} />
+            Scan Your Crop
+          </button>
+        </header>
+
+        <section className="hero container">
+          <div className="hero-copy">
+            <motion.div
+              className="eyebrow"
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.6, ease: "easeOut" }}
+            >
+              <Sparkles size={15} />
+              AI-POWERED CROP HEALTH INTELLIGENCE
+            </motion.div>
+
+            <motion.h1
+              initial={{ opacity: 0, y: 16 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.7, delay: 0.1, ease: "easeOut" }}
+            >
+              See Crop Disease
+              <span> Before It Spreads.</span>
+            </motion.h1>
+
+            <motion.p
+              initial={{ opacity: 0, y: 12 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.65, delay: 0.2, ease: "easeOut" }}
+            >
+              Verdra uses deep learning to identify crop diseases from leaf
+              images, evaluate environmental conditions and provide actionable
+              crop-care recommendations.
+            </motion.p>
+
+            <motion.div
+              className="hero-actions"
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.6, delay: 0.3, ease: "easeOut" }}
+            >
+              <button
+                className="button primary large"
+                onClick={() => navigate("scan")}
+              >
+                Scan Your Crop
+                <ArrowRight size={18} />
+              </button>
+
+              <a className="button secondary large" href="#how">
+                How It Works
+              </a>
+            </motion.div>
+
+            <motion.div
+              className="trust-row"
+              initial="hidden"
+              animate="visible"
+              variants={{
+                hidden: { opacity: 0 },
+                visible: {
+                  opacity: 1,
+                  transition: {
+                    staggerChildren: 0.1,
+                    delayChildren: 0.4,
+                  },
+                },
+              }}
+            >
+              <motion.span
+                variants={{
+                  hidden: { opacity: 0, y: 8 },
+                  visible: { opacity: 1, y: 0, transition: { duration: 0.5, ease: "easeOut" } },
+                }}
+              >
+                <ShieldCheck size={18} />
+                Real model inference
+              </motion.span>
+
+              <motion.span
+                variants={{
+                  hidden: { opacity: 0, y: 8 },
+                  visible: { opacity: 1, y: 0, transition: { duration: 0.5, ease: "easeOut" } },
+                }}
+              >
+                <Eye size={18} />
+                Explainable Grad-CAM
+              </motion.span>
+
+              <motion.span
+                variants={{
+                  hidden: { opacity: 0, y: 8 },
+                  visible: { opacity: 1, y: 0, transition: { duration: 0.5, ease: "easeOut" } },
+                }}
+              >
+                <CloudRain size={18} />
+                Weather-aware spread risk
+              </motion.span>
+            </motion.div>
           </div>
 
-          <div className="trust-row">
-            <span>
-              <ShieldCheck size={18} />
-              Real model inference
-            </span>
+          <div className="hero-visual">
+            <div className="leaf-stage">
+              <div className="scan-corners" />
 
-            <span>
-              <Eye size={18} />
-              Explainable Grad-CAM
-            </span>
+              <div className="leaf-art">
+                <Leaf size={180} strokeWidth={1} />
+              </div>
 
-            <span>
-              <CloudRain size={18} />
-              Weather-aware spread risk
-            </span>
-          </div>
-        </div>
+              {/* Agri-Tech Floating Intelligence Cards */}
+              <div className="floating-card result-float">
+                <span className="mini-label">VERDRA INFERENCE</span>
+                <strong>Real Model Inference</strong>
+                <div className="mini-row">
+                  <CheckCircle2 size={16} />
+                  MobileNetV2 Neural Network
+                </div>
+              </div>
 
-        <div className="hero-visual">
-          <div className="leaf-stage">
-            <div className="scan-corners" />
+              <div className="floating-card weather-float">
+                <Sun size={22} />
+                <div>
+                  <span className="mini-label">METEOROLOGY</span>
+                  <strong>Weather Context</strong>
+                </div>
+              </div>
 
-            <div className="leaf-art">
-              <Leaf size={180} strokeWidth={1} />
-            </div>
-
-            <div className="floating-card result-float">
-              <span className="mini-label">VERDRA INFERENCE</span>
-              <strong>Real Deep Learning</strong>
-              <div className="mini-row">
-                <CheckCircle2 size={16} />
-                MobileNetV2 Neural Network
+              <div className="floating-card gradcam-float">
+                <Eye size={22} />
+                <div>
+                  <span className="mini-label">EXPLAINABLE AI</span>
+                  <strong>Explainable Grad-CAM</strong>
+                </div>
               </div>
             </div>
-
-            <div className="floating-card weather-float">
-              <Sun size={22} />
-              <div>
-                <span className="mini-label">METEOROLOGY</span>
-                <strong>Live Weather Context</strong>
-              </div>
-            </div>
           </div>
-        </div>
-      </section>
+        </section>
+      </div>
 
       <section id="how" className="section container">
         <div className="section-heading">

@@ -27,66 +27,8 @@ interface HistoryItem {
   is_healthy?: boolean;
 }
 
-const DEFAULT_HISTORY: HistoryItem[] = [
-  {
-    id: "scan-101",
-    image_url: "/sample_images/sample_tomato_late_blight.jpg",
-    crop: "Tomato",
-    disease: "Late Blight",
-    confidence: 0.984,
-    severity: "Moderate (28%)",
-    risk_level: "High",
-    created_at: new Date(Date.now() - 3600000 * 2).toISOString(),
-    is_healthy: false,
-  },
-  {
-    id: "scan-102",
-    image_url: "/sample_images/sample_potato_early_blight.jpg",
-    crop: "Potato",
-    disease: "Early Blight",
-    confidence: 0.962,
-    severity: "Low (19%)",
-    risk_level: "Moderate",
-    created_at: new Date(Date.now() - 3600000 * 12).toISOString(),
-    is_healthy: false,
-  },
-  {
-    id: "scan-103",
-    image_url: "/sample_images/sample_pepper_bacterial_spot.jpg",
-    crop: "Pepper",
-    disease: "Bacterial Spot",
-    confidence: 0.941,
-    severity: "Moderate (15%)",
-    risk_level: "High",
-    created_at: new Date(Date.now() - 3600000 * 28).toISOString(),
-    is_healthy: false,
-  },
-  {
-    id: "scan-104",
-    image_url: "/sample_images/sample_tomato_healthy.jpg",
-    crop: "Tomato",
-    disease: "Healthy Foliage",
-    confidence: 0.991,
-    severity: "None (0%)",
-    risk_level: "Low",
-    created_at: new Date(Date.now() - 3600000 * 50).toISOString(),
-    is_healthy: true,
-  },
-  {
-    id: "scan-105",
-    image_url: "/sample_images/sample_potato_healthy.jpg",
-    crop: "Potato",
-    disease: "Healthy Foliage",
-    confidence: 0.988,
-    severity: "None (0%)",
-    risk_level: "Low",
-    created_at: new Date(Date.now() - 3600000 * 72).toISOString(),
-    is_healthy: true,
-  },
-];
-
 export default function HistoryPage() {
-  const [scans, setScans] = useState<HistoryItem[]>(DEFAULT_HISTORY);
+  const [scans, setScans] = useState<HistoryItem[]>([]);
   const [search, setSearch] = useState("");
   const [cropFilter, setCropFilter] = useState("all");
   const [riskFilter, setRiskFilter] = useState("all");
@@ -256,6 +198,14 @@ export default function HistoryPage() {
                           <span className="text-xs font-bold text-[#12372A] font-mono">
                             {scan.crop}
                           </span>
+                          {(scan as any).fieldTag && (
+                            <>
+                              <span className="text-xs text-[#66736B]">·</span>
+                              <span className="text-[10px] px-1.5 py-0.5 rounded-md bg-[#EEF6EC] border border-[#DCE8DC] text-[#2E7D32] font-semibold">
+                                {(scan as any).fieldTag}
+                              </span>
+                            </>
+                          )}
                           <span className="text-xs text-[#66736B]">·</span>
                           <span className="text-xs text-[#66736B] font-mono">
                             {formatDate(scan.created_at)}

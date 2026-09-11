@@ -3,6 +3,7 @@ AgriVisionAI — Predict Route
 POST /api/predict — Upload image, get REAL AI disease prediction.
 """
 import time
+from datetime import datetime, timedelta
 from fastapi import APIRouter, UploadFile, File, Form, HTTPException
 from fastapi.responses import JSONResponse
 from services import (
@@ -46,10 +47,66 @@ async def check_image_quality_endpoint(file: UploadFile = File(...)):
     return quality
 
 
+def _compute_rescan_interval(disease: str, severity: str, risk_level: str, is_healthy: bool) -> dict:
+    """Compute rescan interval from disease characteristics. Not hardcoded per-disease."""
+    if is_healthy:
+        return {
+            "interval_days": 14,
+            "recommended_date": (datetime.utcnow() + timedelta(days=14)).strftime("%Y-%m-%d"),
+            "reason": "Plant appears healthy. Routine monitoring recommended every two weeks.",
+        }
+
+    sev_lower = (severity or "").lower()
+    risk_lower = (risk_level or "").lower()
+
+    # Severity score: 0-3
+    sev_score = 0
+    if "mild" in sev_lower or "low" in sev_lower:
+        sev_score = 1
+    elif "moderate" in sev_lower:
+        sev_score = 2
+    elif "severe" in sev_lower or "high" in sev_lower or "critical" in sev_lower:
+        sev_score = 3
+
+    # Risk score: 0-3
+    risk_score = 0
+    if risk_lower in ("low",):
+        risk_score = 1
+    elif risk_lower in ("moderate",):
+        risk_score = 2
+    elif risk_lower in ("high", "critical"):
+        risk_score = 3
+
+    combined = sev_score + risk_score
+
+    if combined >= 5:
+        days = 1
+        reason = "Severe infection with high environmental spread risk. Daily monitoring critical."
+    elif combined >= 4:
+        days = 2
+        reason = "Significant infection detected. Rescan within 48 hours to track progression."
+    elif combined >= 3:
+        days = 3
+        reason = "Moderate severity with elevated risk requires close monitoring."
+    elif combined >= 2:
+        days = 5
+        reason = "Mild infection detected. Monitor within 5 days to confirm treatment efficacy."
+    else:
+        days = 7
+        reason = "Low severity detected. Weekly monitoring recommended."
+
+    return {
+        "interval_days": days,
+        "recommended_date": (datetime.utcnow() + timedelta(days=days)).strftime("%Y-%m-%d"),
+        "reason": reason,
+    }
+
+
 @router.post("/predict")
 async def predict_disease(
     file: UploadFile = File(...),
     crop: str = Form(default="auto"),
+    field_tag: str = Form(default=""),
 ):
     """
     Analyze a crop leaf image for disease detection using REAL deep learning model inference.
@@ -136,6 +193,7 @@ async def predict_disease(
     result["leaf_score"] = leaf_check.get("leaf_score", 1.0)
     result["image_quality"] = quality
     result["selected_crop"] = crop
+    result["field_tag"] = field_tag
 
     conf = float(result.get("confidence", 0.0))
 
@@ -276,5 +334,15 @@ async def predict_disease(
         "prevention": recs_data.get("preventive_actions", []),
         "monitoring": recs_data.get("monitoring_advice", []),
     }
+
+    # Rescan interval derived from disease severity + risk
+    is_healthy = "healthy" in class_name.lower()
+    risk_level = risk_data.get("risk_level", "Moderate")
+    result["rescan"] = _compute_rescan_interval(
+        disease=class_name,
+        severity=sev_level,
+        risk_level=risk_level,
+        is_healthy=is_healthy,
+    )
 
     return result

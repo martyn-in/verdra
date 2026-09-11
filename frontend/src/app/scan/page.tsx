@@ -53,6 +53,7 @@ export default function ScanPage() {
   const [file, setFile] = useState<File | null>(null);
   const [preview, setPreview] = useState<string | null>(null);
   const [crop, setCrop] = useState("auto");
+  const [fieldTag, setFieldTag] = useState("");
   const [analyzing, setAnalyzing] = useState(false);
   const [currentStepIndex, setCurrentStepIndex] = useState(0);
   const [error, setError] = useState("");
@@ -123,59 +124,92 @@ export default function ScanPage() {
       const compressed = await compressImage(file);
 
       // 2. Real Neural Network Inference (MobileNetV2)
-      const predRes = await api.predict(compressed, crop);
+      //    The backend /api/predict handles: quality check → leaf validation → disease classification
+      //    It returns NOT_A_LEAF (422), UNCERTAIN status, or CONFIDENT with full enrichment.
+      let predRes: any;
+      try {
+        predRes = await api.predict(compressed, crop, fieldTag);
+      } catch (predErr: any) {
+        // Check for non-leaf rejection (HTTP 422 with NOT_A_LEAF error)
+        if (predErr?.payload?.error_code === "NOT_A_LEAF" || predErr?.payload?.code === "NOT_A_LEAF") {
+          clearInterval(stepInterval);
+          setError(
+            "Verdra could not detect a valid crop leaf in this image. Please upload a clear crop-leaf photograph."
+          );
+          setAnalyzing(false);
+          return;
+        }
+        // Check for quality rejection
+        if (predErr?.status === 422) {
+          clearInterval(stepInterval);
+          setError(predErr.message || "Image quality is insufficient for reliable analysis. Please capture a clearer leaf image.");
+          setAnalyzing(false);
+          return;
+        }
+        throw predErr;
+      }
 
-      // 3. Grad-CAM Attention Heatmap
-      const gcRes = await api.gradcam(compressed).catch(() => null);
+      // Handle UNCERTAIN status from the backend
+      if (predRes.status === "UNCERTAIN") {
+        clearInterval(stepInterval);
+        setCurrentStepIndex(5);
+        const scanId = predRes.scan_id || predRes.id || `scan_${Date.now()}`;
+        const uncertainDiagnosis = {
+          id: scanId,
+          status: "UNCERTAIN",
+          crop: predRes.crop || crop,
+          prediction: predRes.prediction || "Uncertain",
+          disease: predRes.disease || "Uncertain / Ambiguous",
+          confidence: predRes.confidence,
+          top_predictions: predRes.top_predictions || [],
+          is_healthy: false,
+          severity: predRes.severity,
+          risk: predRes.risk,
+          imageUrl: preview,
+          fieldTag: fieldTag,
+          scanDate: new Date().toISOString(),
+          created_at: new Date().toISOString(),
+          message: predRes.message,
+        };
+        sessionStorage.setItem("agri_diagnosis", JSON.stringify(uncertainDiagnosis));
+        localStorage.setItem(`verdra_diagnosis_${scanId}`, JSON.stringify(uncertainDiagnosis));
+        localStorage.setItem("verdra_current_diagnosis", JSON.stringify(uncertainDiagnosis));
+        await new Promise((resolve) => setTimeout(resolve, 400));
+        router.push(`/result/${scanId}`);
+        return;
+      }
 
-      // 4. Foliar Severity Estimation
-      const sevRes = await api.severity(compressed).catch(() => ({
+      // 3. Grad-CAM — use the gradcam_url from predict response if available, else fetch separately
+      let gcRes = null;
+      if (predRes.gradcam_url) {
+        gcRes = { overlay: predRes.gradcam_url };
+      } else {
+        gcRes = await api.gradcam(compressed).catch(() => null);
+      }
+
+      // Use severity/weather/risk from the predict enrichment response directly
+      const sevRes = predRes.severity || await api.severity(compressed).catch(() => ({
         severity: "Moderate",
         infected_percentage: 24,
         category: "Moderate Infection",
         description: "Visual foliar lesion calculation",
       }));
 
-      // 5. Environmental Conditions Check (Live API)
-      let weatherRes = null;
-      try {
-        weatherRes = await api.weather({ city: "Hyderabad" });
-      } catch {
-        weatherRes = {
-          temperature: 27,
-          humidity: 78,
-          rainfall: 2.1,
-          wind_speed: 5.4,
-          description: "Moderate humidity with light cloud cover",
-          city: "Hyderabad Region",
-          is_live: false,
-          source: "Regional baseline default",
-        };
-      }
+      const weatherRes = predRes.weather || await api.weather({ city: "Hyderabad" }).catch(() => ({
+        temperature: 27, humidity: 78, rainfall: 2.1, wind_speed: 5.4,
+        description: "Regional baseline", is_live: false,
+      }));
 
-      // 6. Epidemiological Spread Risk Calculation
-      const riskRes = await api
-        .risk({
-          disease: predRes.prediction,
-          temperature: weatherRes?.temperature,
-          humidity: weatherRes?.humidity,
-          rainfall: weatherRes?.rainfall,
-          severity: sevRes?.severity,
-          infected_percentage: sevRes?.infected_percentage,
-        })
-        .catch(() => ({
-          level: "High",
-          factors: ["Elevated ambient humidity", "Visible foliar lesions detected"],
-          explanation: "Environmental conditions may increase spread risk.",
-        }));
+      const riskRes = predRes.risk || { level: "Moderate", factors: [], explanation: "" };
 
       // Complete progress animation
       clearInterval(stepInterval);
       setCurrentStepIndex(5);
 
-      const scanId = `scan_${Date.now()}`;
+      const scanId = predRes.scan_id || predRes.id || `scan_${Date.now()}`;
       const fullDiagnosis = {
         id: scanId,
+        status: "CONFIDENT",
         crop: predRes.crop || crop,
         prediction: predRes.prediction,
         confidence: predRes.confidence,
@@ -185,7 +219,10 @@ export default function ScanPage() {
         gradcam: gcRes,
         weather: weatherRes,
         risk: riskRes,
+        recommendations: predRes.recommendations,
+        rescan: predRes.rescan,
         imageUrl: preview,
+        fieldTag: fieldTag,
         scanDate: new Date().toISOString(),
         created_at: new Date().toISOString(),
       };
@@ -195,7 +232,7 @@ export default function ScanPage() {
       localStorage.setItem(`verdra_diagnosis_${scanId}`, JSON.stringify(fullDiagnosis));
       localStorage.setItem("verdra_current_diagnosis", JSON.stringify(fullDiagnosis));
 
-      // Append to local scan history
+      // Append to local scan history (only successful/confident scans)
       try {
         const existingHistory = JSON.parse(localStorage.getItem("verdra_recent_scans") || "[]");
         existingHistory.unshift({
@@ -204,7 +241,11 @@ export default function ScanPage() {
           crop: predRes.crop || crop,
           disease: predRes.prediction,
           confidence: predRes.confidence,
+          severity: sevRes?.level || sevRes?.severity || "N/A",
+          affected_percentage: sevRes?.percentage || sevRes?.infected_percentage || 0,
           risk_level: riskRes?.level || "Moderate",
+          fieldTag: fieldTag,
+          rescan: predRes.rescan,
           created_at: fullDiagnosis.scanDate,
           is_healthy: predRes.is_healthy,
         });
@@ -415,25 +456,42 @@ export default function ScanPage() {
                   />
                 </div>
 
-                {/* Crop Selection & Primary Analyze Button */}
+                {/* Crop Selection */}
                 <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 pt-4 border-t border-[#DCE8DC]">
-                  <div className="w-full sm:w-64">
-                    <label className="block text-xs font-bold uppercase tracking-wider text-[#12372A] mb-2">
-                      Crop Host Selection
-                    </label>
-                    <div className="relative">
-                      <select
-                        value={crop}
-                        onChange={(e) => setCrop(e.target.value)}
-                        className="w-full appearance-none rounded-xl border border-[#DCE8DC] bg-[#F8FAF6] px-3.5 py-3 text-sm font-semibold text-[#12372A] focus:border-[#2E7D32] focus:outline-none"
-                      >
-                        {cropOptions.map((opt) => (
-                          <option key={opt.value} value={opt.value}>
-                            {opt.label}
-                          </option>
-                        ))}
-                      </select>
-                      <ChevronDown className="w-4 h-4 text-[#66736B] absolute right-3.5 top-3.5 pointer-events-none" />
+                  <div className="flex-1 space-y-4">
+                    <div className="w-full sm:w-64">
+                      <label className="block text-xs font-bold uppercase tracking-wider text-[#12372A] mb-2">
+                        Crop Host Selection
+                      </label>
+                      <div className="relative">
+                        <select
+                          value={crop}
+                          onChange={(e) => setCrop(e.target.value)}
+                          className="w-full appearance-none rounded-xl border border-[#DCE8DC] bg-[#F8FAF6] px-3.5 py-3 text-sm font-semibold text-[#12372A] focus:border-[#2E7D32] focus:outline-none"
+                        >
+                          {cropOptions.map((opt) => (
+                            <option key={opt.value} value={opt.value}>
+                              {opt.label}
+                            </option>
+                          ))}
+                        </select>
+                        <ChevronDown className="w-4 h-4 text-[#66736B] absolute right-3.5 top-3.5 pointer-events-none" />
+                      </div>
+                    </div>
+
+                    {/* Field / Plant Tag — Optional */}
+                    <div className="w-full sm:w-64">
+                      <label className="block text-xs font-bold uppercase tracking-wider text-[#66736B] mb-2">
+                        Field / Plant Tag <span className="font-normal normal-case">(optional)</span>
+                      </label>
+                      <input
+                        type="text"
+                        value={fieldTag}
+                        onChange={(e) => setFieldTag(e.target.value)}
+                        placeholder="e.g. Field A, Tomato Row 3"
+                        maxLength={60}
+                        className="w-full rounded-xl border border-[#DCE8DC] bg-[#F8FAF6] px-3.5 py-2.5 text-sm text-[#12372A] placeholder:text-[#B0BDB5] focus:border-[#2E7D32] focus:outline-none"
+                      />
                     </div>
                   </div>
 
