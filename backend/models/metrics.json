@@ -1,0 +1,174 @@
+{
+  "model_architecture": "MobileNetV2 (ImageNet Transfer Learning)",
+  "model_filename": "agri_vision_model.keras",
+  "dataset_name": "PlantVillage Benchmark (8 Hackathon Classes)",
+  "evaluation_timestamp": "2026-09-11 08:57:37 UTC",
+  "evaluation_note": "Metrics calculated on an untouched held-out test set.",
+  "num_classes": 8,
+  "num_test_images": 240,
+  "dataset_split": {
+    "training_samples": 2240,
+    "training_base_samples": 1120,
+    "validation_samples": 240,
+    "test_samples": 240,
+    "total_samples": 1600
+  },
+  "test_accuracy": 0.9917,
+  "precision_macro": 0.9917,
+  "recall_macro": 0.9917,
+  "f1_macro": 0.9917,
+  "precision_weighted": 0.9917,
+  "recall_weighted": 0.9917,
+  "f1_weighted": 0.9917,
+  "class_distribution": {
+    "Pepper_bell_Bacterial_spot": 30,
+    "Potato_Early_Blight": 30,
+    "Potato_Late_Blight": 30,
+    "Potato_healthy": 30,
+    "Tomato_Bacterial_spot": 30,
+    "Tomato_Early_Blight": 30,
+    "Tomato_Late_Blight": 30,
+    "Tomato_healthy": 30
+  },
+  "per_class": {
+    "Pepper_bell_Bacterial_spot": {
+      "crop": "Pepper",
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1_score": 1.0,
+      "support": 30
+    },
+    "Potato_Early_Blight": {
+      "crop": "Potato",
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1_score": 1.0,
+      "support": 30
+    },
+    "Potato_Late_Blight": {
+      "crop": "Potato",
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1_score": 1.0,
+      "support": 30
+    },
+    "Potato_healthy": {
+      "crop": "Potato",
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1_score": 1.0,
+      "support": 30
+    },
+    "Tomato_Bacterial_spot": {
+      "crop": "Tomato",
+      "precision": 0.9667,
+      "recall": 0.9667,
+      "f1_score": 0.9667,
+      "support": 30
+    },
+    "Tomato_Early_Blight": {
+      "crop": "Tomato",
+      "precision": 0.9667,
+      "recall": 0.9667,
+      "f1_score": 0.9667,
+      "support": 30
+    },
+    "Tomato_Late_Blight": {
+      "crop": "Tomato",
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1_score": 1.0,
+      "support": 30
+    },
+    "Tomato_healthy": {
+      "crop": "Tomato",
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1_score": 1.0,
+      "support": 30
+    }
+  },
+  "confusion_matrix": [
+    [
+      30,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+    ],
+    [
+      0,
+      30,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+    ],
+    [
+      0,
+      0,
+      30,
+      0,
+      0,
+      0,
+      0,
+      0
+    ],
+    [
+      0,
+      0,
+      0,
+      30,
+      0,
+      0,
+      0,
+      0
+    ],
+    [
+      0,
+      0,
+      0,
+      0,
+      29,
+      1,
+      0,
+      0
+    ],
+    [
+      0,
+      0,
+      0,
+      0,
+      1,
+      29,
+      0,
+      0
+    ],
+    [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      30,
+      0
+    ],
+    [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      30
+    ]
+  ],
+  "mean_inference_latency_ms": 8.87
+}

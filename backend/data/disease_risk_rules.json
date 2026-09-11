@@ -1,0 +1,74 @@
+{
+  "humidity_thresholds": {
+    "critical": 90,
+    "high": 75,
+    "moderate": 60
+  },
+  "temperature_ranges": {
+    "fungal_optimal_min": 18,
+    "fungal_optimal_max": 28,
+    "bacterial_optimal_min": 22,
+    "bacterial_optimal_max": 35
+  },
+  "rainfall_thresholds": {
+    "heavy": 10,
+    "moderate": 3,
+    "light": 0.5
+  },
+  "disease_factors": {
+    "early_blight": {
+      "base_risk": 15,
+      "type": "fungal",
+      "humidity_sensitivity": "high",
+      "spread_mechanism": "airborne_spores"
+    },
+    "late_blight": {
+      "base_risk": 25,
+      "type": "fungal",
+      "humidity_sensitivity": "very_high",
+      "spread_mechanism": "airborne_spores_water"
+    },
+    "bacterial_spot": {
+      "base_risk": 20,
+      "type": "bacterial",
+      "humidity_sensitivity": "high",
+      "spread_mechanism": "water_splash"
+    },
+    "leaf_mold": {
+      "base_risk": 15,
+      "type": "fungal",
+      "humidity_sensitivity": "very_high",
+      "spread_mechanism": "airborne_spores"
+    },
+    "septoria_leaf_spot": {
+      "base_risk": 15,
+      "type": "fungal",
+      "humidity_sensitivity": "high",
+      "spread_mechanism": "water_splash"
+    },
+    "target_spot": {
+      "base_risk": 12,
+      "type": "fungal",
+      "humidity_sensitivity": "moderate",
+      "spread_mechanism": "airborne_spores"
+    },
+    "mosaic_virus": {
+      "base_risk": 10,
+      "type": "viral",
+      "humidity_sensitivity": "low",
+      "spread_mechanism": "mechanical_insects"
+    },
+    "yellow_leaf_curl_virus": {
+      "base_risk": 18,
+      "type": "viral",
+      "humidity_sensitivity": "low",
+      "spread_mechanism": "whitefly_vector"
+    },
+    "spider_mites": {
+      "base_risk": 12,
+      "type": "pest",
+      "humidity_sensitivity": "inverse",
+      "spread_mechanism": "crawling_wind"
+    }
+  }
+}

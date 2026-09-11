@@ -1,0 +1,652 @@
+{
+  "diseases": [
+    {
+      "id": "tomato_early_blight",
+      "name": "Early Blight",
+      "scientific_name": "Alternaria solani",
+      "crop": "Tomato",
+      "pathogen_type": "Fungal",
+      "risk_level": "High",
+      "description": "Early blight is a common fungal disease of tomatoes caused by Alternaria solani. It primarily affects older leaves but can also impact stems and fruit. The disease is characterized by dark, concentric-ringed lesions.",
+      "symptoms": [
+        "Dark brown to black lesions with concentric rings (target-like pattern) on lower/older leaves",
+        "Yellowing of tissue around lesions",
+        "Progressive defoliation starting from the bottom of the plant",
+        "Dark, sunken lesions on stems near the soil line",
+        "Leathery, dark spots on fruit near the stem end"
+      ],
+      "causes": [
+        "Fungal pathogen Alternaria solani surviving in infected plant debris",
+        "Warm temperatures (24–29°C) combined with high humidity or frequent rainfall",
+        "Overhead irrigation promoting leaf wetness",
+        "Poor air circulation due to dense planting",
+        "Nutrient-deficient plants are more susceptible"
+      ],
+      "immediate_actions": [
+        "Remove and destroy infected leaves to reduce spore load",
+        "Improve air circulation by pruning lower branches",
+        "Avoid overhead watering; use drip irrigation instead",
+        "Apply locally approved fungicide if disease is progressing. Use only locally approved agricultural products according to label instructions and local agricultural guidance.",
+        "Stake or cage plants to keep foliage off the ground"
+      ],
+      "preventive_actions": [
+        "Use disease-resistant tomato varieties when available",
+        "Practice crop rotation (2-3 year cycle, avoid other Solanaceae)",
+        "Mulch around plants to prevent soil splash onto lower leaves",
+        "Maintain proper plant spacing for good air circulation",
+        "Remove all crop debris after harvest",
+        "Ensure adequate nutrition, especially potassium and calcium"
+      ],
+      "monitoring_advice": [
+        "Inspect lower/older leaves weekly for early lesion development",
+        "Monitor weather for warm, humid conditions that favor the disease",
+        "Check after rainfall or overhead irrigation events",
+        "Track disease progression — if lesions spread to upper canopy, escalate treatment"
+      ],
+      "environmental_conditions": {
+        "optimal_temperature": "24–29°C",
+        "humidity": "Above 75% promotes infection",
+        "rainfall": "Frequent rainfall or overhead irrigation increases risk"
+      },
+      "expert_escalation": "Consult an agricultural extension officer if lesions cover more than 30% of foliage, if the disease is spreading rapidly despite management, or if you are unsure about appropriate treatment options."
+    },
+    {
+      "id": "tomato_late_blight",
+      "name": "Late Blight",
+      "scientific_name": "Phytophthora infestans",
+      "crop": "Tomato",
+      "pathogen_type": "Fungal (Oomycete)",
+      "risk_level": "Critical",
+      "description": "Late blight is a devastating disease that can rapidly destroy entire tomato crops. It caused the Irish Potato Famine and remains one of the most destructive plant diseases worldwide.",
+      "symptoms": [
+        "Large, irregularly shaped, water-soaked lesions on leaves",
+        "White, fuzzy mold growth on the underside of leaves in humid conditions",
+        "Dark brown to black lesions that spread rapidly across the canopy",
+        "Firm, dark brown blotches on fruit",
+        "Rapid wilting and death of entire plants within days"
+      ],
+      "causes": [
+        "Oomycete pathogen Phytophthora infestans",
+        "Cool temperatures (15–22°C) with high humidity or prolonged leaf wetness",
+        "Rain splash and wind-dispersed spores",
+        "Infected seed potatoes or volunteer potato plants nearby"
+      ],
+      "immediate_actions": [
+        "Remove and destroy all infected plants immediately — do NOT compost",
+        "Apply locally approved fungicide immediately to remaining healthy plants. Use only locally approved agricultural products according to label instructions and local agricultural guidance.",
+        "Increase monitoring frequency to daily",
+        "Notify neighboring farmers — late blight spreads very rapidly through airborne spores"
+      ],
+      "preventive_actions": [
+        "Use late blight-resistant varieties",
+        "Avoid planting tomatoes near potato fields",
+        "Ensure good air circulation and wide spacing",
+        "Use drip irrigation, never overhead watering",
+        "Remove all volunteer potato/tomato plants in the area",
+        "Apply preventive fungicides during high-risk weather periods"
+      ],
+      "monitoring_advice": [
+        "Monitor daily during cool, wet weather periods",
+        "Check lower canopy and stems first",
+        "Look for white sporulation on leaf undersides early in the morning",
+        "Use late blight forecasting tools if available in your region"
+      ],
+      "environmental_conditions": {
+        "optimal_temperature": "15–22°C",
+        "humidity": "Above 80% with prolonged leaf wetness",
+        "rainfall": "Cool, rainy weather dramatically increases risk"
+      },
+      "expert_escalation": "Seek immediate professional help at first sign of late blight. This disease can destroy an entire crop within 7–10 days under favorable conditions."
+    },
+    {
+      "id": "tomato_leaf_mold",
+      "name": "Leaf Mold",
+      "scientific_name": "Passalora fulva",
+      "crop": "Tomato",
+      "pathogen_type": "Fungal",
+      "risk_level": "Moderate",
+      "description": "Leaf mold is primarily a greenhouse and high-tunnel disease of tomatoes. It thrives in high-humidity environments with poor air circulation.",
+      "symptoms": [
+        "Light green to yellowish spots on upper leaf surfaces",
+        "Olive-green to brown velvety mold growth on lower leaf surfaces",
+        "Leaves may curl, wither, and drop",
+        "Usually starts on older, lower leaves and progresses upward"
+      ],
+      "causes": [
+        "Fungal pathogen Passalora fulva (previously Cladosporium fulvum)",
+        "High humidity (above 85%) and warm temperatures",
+        "Poor ventilation in greenhouses or high tunnels",
+        "Dense plant canopy restricting air flow"
+      ],
+      "immediate_actions": [
+        "Improve ventilation immediately — open greenhouse vents or remove side walls",
+        "Remove heavily infected lower leaves",
+        "Reduce humidity through proper watering practices",
+        "Avoid wetting foliage during irrigation"
+      ],
+      "preventive_actions": [
+        "Use resistant tomato varieties",
+        "Maintain proper plant spacing",
+        "Ensure adequate greenhouse ventilation",
+        "Use drip irrigation",
+        "Sanitize greenhouse between seasons"
+      ],
+      "monitoring_advice": [
+        "Regularly check lower leaf undersides for early mold growth",
+        "Monitor greenhouse humidity levels — keep below 85% when possible",
+        "Increase monitoring during warm, humid periods"
+      ],
+      "environmental_conditions": {
+        "optimal_temperature": "22–28°C",
+        "humidity": "Above 85% strongly favors infection",
+        "rainfall": "More common in enclosed growing environments"
+      },
+      "expert_escalation": "Consult if mold is spreading despite improved ventilation, or if you need guidance on resistant varieties for your region."
+    },
+    {
+      "id": "tomato_septoria_leaf_spot",
+      "name": "Septoria Leaf Spot",
+      "scientific_name": "Septoria lycopersici",
+      "crop": "Tomato",
+      "pathogen_type": "Fungal",
+      "risk_level": "Moderate",
+      "description": "Septoria leaf spot is one of the most common and destructive foliar diseases of tomatoes. It causes numerous small, circular spots that can rapidly defoliate plants.",
+      "symptoms": [
+        "Numerous small (2–3mm), circular spots with dark borders and gray-tan centers",
+        "Tiny black dots (pycnidia) visible in the center of lesions under magnification",
+        "Extensive yellowing and leaf drop",
+        "Usually starts on lower leaves and progresses upward",
+        "Rarely affects fruit directly but reduces yield through defoliation"
+      ],
+      "causes": [
+        "Fungal pathogen Septoria lycopersici",
+        "Warm temperatures and wet conditions",
+        "Splash from rain or irrigation spreading spores",
+        "Pathogen survives in infected crop debris"
+      ],
+      "immediate_actions": [
+        "Remove infected lower leaves",
+        "Apply mulch to prevent soil splash",
+        "Switch to drip irrigation if using overhead watering",
+        "Apply locally approved fungicide if spread is rapid. Use only locally approved agricultural products according to label instructions and local agricultural guidance."
+      ],
+      "preventive_actions": [
+        "Practice crop rotation with non-solanaceous crops",
+        "Use resistant varieties when available",
+        "Stake and prune plants for air circulation",
+        "Apply mulch at planting",
+        "Remove all plant debris at season end"
+      ],
+      "monitoring_advice": [
+        "Check lower leaves weekly during the growing season",
+        "Look for tiny circular spots with gray centers",
+        "Monitor especially after wet weather events"
+      ],
+      "environmental_conditions": {
+        "optimal_temperature": "20–27°C",
+        "humidity": "Extended wet periods promote infection",
+        "rainfall": "Rain splash is primary dispersal mechanism"
+      },
+      "expert_escalation": "Consult if defoliation exceeds 40% or if you need help selecting appropriate fungicide programs."
+    },
+    {
+      "id": "tomato_bacterial_spot",
+      "name": "Bacterial Spot",
+      "scientific_name": "Xanthomonas spp.",
+      "crop": "Tomato",
+      "pathogen_type": "Bacterial",
+      "risk_level": "High",
+      "description": "Bacterial spot is a serious disease of tomatoes and peppers caused by several species of Xanthomonas bacteria. It affects leaves, stems, and fruit.",
+      "symptoms": [
+        "Small, dark, water-soaked spots on leaves",
+        "Spots become angular and may have a yellow halo",
+        "Heavily infected leaves turn yellow and drop",
+        "Raised, scab-like lesions on fruit",
+        "Spots on stems appear as elongated dark streaks"
+      ],
+      "causes": [
+        "Xanthomonas bacteria species",
+        "Warm, wet weather conditions",
+        "Contaminated seed or transplants",
+        "Splash dispersal from rain or irrigation",
+        "Bacteria enter through natural openings or wounds"
+      ],
+      "immediate_actions": [
+        "Avoid working with plants when foliage is wet",
+        "Remove severely infected plants",
+        "Apply copper-based bactericide if locally approved. Use only locally approved agricultural products according to label instructions and local agricultural guidance.",
+        "Reduce overhead irrigation"
+      ],
+      "preventive_actions": [
+        "Use certified disease-free seed and transplants",
+        "Practice crop rotation (2+ years)",
+        "Use resistant varieties",
+        "Sanitize tools between plants",
+        "Avoid handling wet plants"
+      ],
+      "monitoring_advice": [
+        "Inspect transplants before planting",
+        "Monitor after storms or heavy rain",
+        "Check fruit for scab-like lesions as they develop"
+      ],
+      "environmental_conditions": {
+        "optimal_temperature": "25–30°C",
+        "humidity": "Warm, humid conditions with rain promote spread",
+        "rainfall": "Rain splash is the primary means of spread"
+      },
+      "expert_escalation": "Consult if bacterial spot is confirmed and spreading rapidly, especially in commercial production. There are no curative treatments for bacterial diseases."
+    },
+    {
+      "id": "tomato_target_spot",
+      "name": "Target Spot",
+      "scientific_name": "Corynespora cassiicola",
+      "crop": "Tomato",
+      "pathogen_type": "Fungal",
+      "risk_level": "Moderate",
+      "description": "Target spot is caused by the fungus Corynespora cassiicola and can affect leaves, stems, and fruit of tomato plants.",
+      "symptoms": [
+        "Small, dark brown spots that enlarge to form target-like concentric rings",
+        "Lesions may have a yellow halo",
+        "Spots on fruit are sunken with concentric rings",
+        "Lower and middle leaves are affected first"
+      ],
+      "causes": [
+        "Corynespora cassiicola fungus",
+        "Warm, humid conditions",
+        "Poor air circulation",
+        "Dense planting"
+      ],
+      "immediate_actions": [
+        "Remove infected leaves",
+        "Improve air circulation by pruning",
+        "Apply locally approved fungicide. Use only locally approved agricultural products according to label instructions and local agricultural guidance."
+      ],
+      "preventive_actions": [
+        "Crop rotation",
+        "Proper plant spacing",
+        "Mulching to prevent splash",
+        "Good sanitation"
+      ],
+      "monitoring_advice": [
+        "Regular foliar inspection",
+        "Monitor during warm, humid weather"
+      ],
+      "environmental_conditions": {
+        "optimal_temperature": "20–32°C",
+        "humidity": "High humidity favors infection",
+        "rainfall": "Frequent rains increase risk"
+      },
+      "expert_escalation": "Consult if disease persists despite management."
+    },
+    {
+      "id": "tomato_mosaic_virus",
+      "name": "Tomato Mosaic Virus",
+      "scientific_name": "Tomato mosaic virus (ToMV)",
+      "crop": "Tomato",
+      "pathogen_type": "Viral",
+      "risk_level": "Moderate",
+      "description": "Tomato mosaic virus causes mottling and distortion of leaves. It is highly stable and can persist on tools, clothing, and in soil.",
+      "symptoms": [
+        "Light and dark green mosaic mottling on leaves",
+        "Leaf curling and distortion",
+        "Reduced fruit set and yield",
+        "Yellow-green mottling on fruit",
+        "Stunted plant growth"
+      ],
+      "causes": [
+        "Tomato mosaic virus (ToMV)",
+        "Mechanical transmission through handling and tools",
+        "Contaminated seed",
+        "Very stable virus — persists on surfaces for long periods"
+      ],
+      "immediate_actions": [
+        "Do NOT handle healthy plants after touching infected ones",
+        "Remove and destroy infected plants",
+        "Wash hands with soap and water before handling other plants",
+        "Disinfect all tools with a solution of milk or trisodium phosphate"
+      ],
+      "preventive_actions": [
+        "Use TMV/ToMV-resistant varieties (most modern varieties have Tm-2 resistance)",
+        "Use certified virus-free seed",
+        "Practice strict sanitation",
+        "Do not use tobacco products near tomato plants",
+        "Disinfect tools regularly"
+      ],
+      "monitoring_advice": [
+        "Look for mosaic patterns on young leaves",
+        "Check for leaf distortion and curling",
+        "Monitor transplant sources"
+      ],
+      "environmental_conditions": {
+        "optimal_temperature": "Virus is active across a wide temperature range",
+        "humidity": "Not strongly humidity-dependent",
+        "rainfall": "Spread is primarily mechanical, not weather-driven"
+      },
+      "expert_escalation": "Consult to confirm virus identity through lab testing if mosaic symptoms are observed."
+    },
+    {
+      "id": "tomato_yellow_leaf_curl_virus",
+      "name": "Yellow Leaf Curl Virus",
+      "scientific_name": "Tomato yellow leaf curl virus (TYLCV)",
+      "crop": "Tomato",
+      "pathogen_type": "Viral",
+      "risk_level": "High",
+      "description": "TYLCV is a devastating begomovirus transmitted by whiteflies. It causes severe stunting and yield loss in tomatoes.",
+      "symptoms": [
+        "Severe upward curling of leaflet margins",
+        "Pronounced yellowing of leaves",
+        "Stunted, bushy plant growth",
+        "Flower drop and drastically reduced fruit set",
+        "Plants infected early may produce no fruit"
+      ],
+      "causes": [
+        "Begomovirus transmitted by silverleaf whitefly (Bemisia tabaci)",
+        "High whitefly populations",
+        "Warm conditions favoring whitefly reproduction",
+        "Nearby infected weed hosts"
+      ],
+      "immediate_actions": [
+        "Remove and destroy infected plants immediately",
+        "Implement whitefly management (sticky traps, reflective mulch)",
+        "Control whiteflies on remaining plants. Use only locally approved agricultural products according to label instructions and local agricultural guidance.",
+        "Remove weed hosts around the field"
+      ],
+      "preventive_actions": [
+        "Use TYLCV-resistant varieties",
+        "Use insect-proof mesh in nurseries",
+        "Implement a whitefly-free period before planting",
+        "Use reflective mulch to repel whiteflies",
+        "Remove crop residues promptly"
+      ],
+      "monitoring_advice": [
+        "Monitor whitefly populations with yellow sticky traps",
+        "Check young plants for curling and yellowing symptoms",
+        "Scout field borders for whitefly-infested weeds"
+      ],
+      "environmental_conditions": {
+        "optimal_temperature": "Warm conditions (25–35°C) favor whitefly activity",
+        "humidity": "Moderate to low humidity favors whiteflies",
+        "rainfall": "Dry, warm conditions increase whitefly populations"
+      },
+      "expert_escalation": "Consult immediately if TYLCV is suspected — early removal and whitefly management are critical to prevent field-wide spread."
+    },
+    {
+      "id": "tomato_spider_mites",
+      "name": "Spider Mites (Two-spotted)",
+      "scientific_name": "Tetranychus urticae",
+      "crop": "Tomato",
+      "pathogen_type": "Pest",
+      "risk_level": "Moderate",
+      "description": "Two-spotted spider mites are tiny arachnid pests that feed on leaf cells, causing stippling, yellowing, and eventual defoliation.",
+      "symptoms": [
+        "Fine yellow or white stippling on upper leaf surfaces",
+        "Fine webbing on leaf undersides and between leaves",
+        "Leaves turn bronze, dry out, and drop",
+        "Tiny moving dots visible on leaf undersides (mites are <0.5mm)",
+        "Severe infestations cause plant stress and yield loss"
+      ],
+      "causes": [
+        "Tetranychus urticae spider mites",
+        "Hot, dry conditions favor rapid population buildup",
+        "Overuse of broad-spectrum insecticides that kill natural predators",
+        "Dusty field conditions",
+        "Water-stressed plants are more susceptible"
+      ],
+      "immediate_actions": [
+        "Spray plant undersides with a strong jet of water to dislodge mites",
+        "Apply miticide or insecticidal soap. Use only locally approved agricultural products according to label instructions and local agricultural guidance.",
+        "Increase irrigation to reduce plant stress",
+        "Consider releasing predatory mites (Phytoseiulus persimilis)"
+      ],
+      "preventive_actions": [
+        "Avoid broad-spectrum insecticide overuse",
+        "Maintain adequate plant irrigation",
+        "Encourage natural enemies (predatory mites, ladybugs)",
+        "Control dust in and around fields",
+        "Monitor regularly in hot, dry weather"
+      ],
+      "monitoring_advice": [
+        "Check leaf undersides weekly with a hand lens",
+        "Look for stippling on upper leaf surfaces as an early sign",
+        "Tap leaves over white paper to see dislodged mites",
+        "Monitor during hot, dry weather when populations spike"
+      ],
+      "environmental_conditions": {
+        "optimal_temperature": "Above 27°C with low humidity",
+        "humidity": "Low humidity favors mite reproduction (inverse of most diseases)",
+        "rainfall": "Heavy rain can knock mites off plants"
+      },
+      "expert_escalation": "Consult for biological control options or resistance management if chemical treatments are losing effectiveness."
+    },
+    {
+      "id": "tomato_healthy",
+      "name": "Healthy",
+      "scientific_name": "N/A",
+      "crop": "Tomato",
+      "pathogen_type": "None",
+      "risk_level": "Low",
+      "description": "The tomato plant appears healthy with no visible signs of disease or pest damage.",
+      "symptoms": ["No disease symptoms detected"],
+      "causes": ["N/A — Plant is healthy"],
+      "immediate_actions": [
+        "No immediate action required",
+        "Continue standard crop maintenance"
+      ],
+      "preventive_actions": [
+        "Maintain proper watering schedule",
+        "Ensure adequate nutrition through balanced fertilization",
+        "Practice crop rotation in future seasons",
+        "Monitor regularly for early detection of any issues"
+      ],
+      "monitoring_advice": [
+        "Continue weekly visual inspections",
+        "Monitor weather conditions for disease-favorable periods",
+        "Keep records of plant health for future reference"
+      ],
+      "environmental_conditions": {
+        "optimal_temperature": "21–27°C for healthy growth",
+        "humidity": "40–70% is ideal",
+        "rainfall": "Consistent moisture without waterlogging"
+      },
+      "expert_escalation": "Routine consultation for general crop management advice if desired."
+    },
+    {
+      "id": "potato_early_blight",
+      "name": "Early Blight",
+      "scientific_name": "Alternaria solani",
+      "crop": "Potato",
+      "pathogen_type": "Fungal",
+      "risk_level": "High",
+      "description": "Early blight of potato is caused by the same pathogen as tomato early blight. It causes concentric-ringed lesions and can significantly reduce tuber yield.",
+      "symptoms": [
+        "Dark brown lesions with concentric rings on lower leaves",
+        "Lesions may coalesce, causing extensive leaf death",
+        "Premature defoliation reduces tuber size",
+        "Tuber lesions appear as dark, sunken spots"
+      ],
+      "causes": [
+        "Alternaria solani fungus",
+        "Warm temperatures and alternating wet/dry conditions",
+        "Stressed or nutrient-deficient plants",
+        "Pathogen survives in crop debris"
+      ],
+      "immediate_actions": [
+        "Remove infected leaves if practical",
+        "Apply locally approved fungicide. Use only locally approved agricultural products according to label instructions and local agricultural guidance.",
+        "Ensure adequate irrigation to reduce plant stress"
+      ],
+      "preventive_actions": [
+        "Use resistant potato varieties",
+        "Practice 3+ year crop rotation",
+        "Maintain adequate fertility (especially nitrogen and potassium)",
+        "Use certified seed potatoes",
+        "Destroy infected crop debris"
+      ],
+      "monitoring_advice": [
+        "Begin scouting when plants are 15cm tall",
+        "Monitor lower canopy weekly",
+        "Intensify monitoring after warm, wet weather"
+      ],
+      "environmental_conditions": {
+        "optimal_temperature": "24–29°C",
+        "humidity": "Alternating wet and dry promotes sporulation",
+        "rainfall": "Rain splash spreads spores"
+      },
+      "expert_escalation": "Consult for integrated pest management programs in commercial potato production."
+    },
+    {
+      "id": "potato_late_blight",
+      "name": "Late Blight",
+      "scientific_name": "Phytophthora infestans",
+      "crop": "Potato",
+      "pathogen_type": "Fungal (Oomycete)",
+      "risk_level": "Critical",
+      "description": "Late blight of potato is the same disease that caused the Irish Potato Famine. It can destroy a potato crop within days under favorable conditions.",
+      "symptoms": [
+        "Water-soaked, dark lesions on leaves, often starting at tips or edges",
+        "White mold growth on leaf undersides",
+        "Rapid browning and death of foliage",
+        "Firm, reddish-brown granular rot in tubers",
+        "Entire fields can be devastated within a week"
+      ],
+      "causes": [
+        "Phytophthora infestans oomycete",
+        "Cool (10–20°C), wet conditions with high humidity",
+        "Airborne sporangia can travel long distances",
+        "Infected seed potatoes"
+      ],
+      "immediate_actions": [
+        "Apply fungicide immediately to healthy plants. Use only locally approved agricultural products according to label instructions and local agricultural guidance.",
+        "Destroy all infected plant material — do NOT compost",
+        "Inform neighboring growers",
+        "Do not harvest tubers until 2–3 weeks after vine death to prevent tuber infection"
+      ],
+      "preventive_actions": [
+        "Use late blight-resistant varieties",
+        "Plant only certified seed potatoes",
+        "Use late blight forecasting models (BLITECAST) if available",
+        "Apply preventive fungicides during high-risk periods",
+        "Destroy volunteer potatoes and cull piles"
+      ],
+      "monitoring_advice": [
+        "Daily monitoring during cool, wet weather",
+        "Check field borders and low-lying areas first",
+        "Use regional late blight tracking systems if available"
+      ],
+      "environmental_conditions": {
+        "optimal_temperature": "10–20°C",
+        "humidity": "Above 90% with prolonged leaf wetness",
+        "rainfall": "Cool, rainy weather is the primary driver"
+      },
+      "expert_escalation": "Seek immediate professional assistance at first suspicion of late blight. Delay can result in total crop loss."
+    },
+    {
+      "id": "potato_healthy",
+      "name": "Healthy",
+      "scientific_name": "N/A",
+      "crop": "Potato",
+      "pathogen_type": "None",
+      "risk_level": "Low",
+      "description": "The potato plant appears healthy with no visible signs of disease.",
+      "symptoms": ["No disease symptoms detected"],
+      "causes": ["N/A — Plant is healthy"],
+      "immediate_actions": [
+        "No immediate action required",
+        "Continue standard crop care"
+      ],
+      "preventive_actions": [
+        "Hill potatoes regularly to prevent tuber greening",
+        "Maintain consistent soil moisture",
+        "Practice crop rotation",
+        "Use certified seed potatoes"
+      ],
+      "monitoring_advice": [
+        "Continue regular visual inspections",
+        "Monitor for Colorado potato beetle and other pests",
+        "Watch for late blight alerts in your region"
+      ],
+      "environmental_conditions": {
+        "optimal_temperature": "15–20°C for tuber development",
+        "humidity": "Moderate",
+        "rainfall": "Consistent moisture is important"
+      },
+      "expert_escalation": "Routine consultation for fertility and pest management if desired."
+    },
+    {
+      "id": "pepper_bacterial_spot",
+      "name": "Bacterial Spot",
+      "scientific_name": "Xanthomonas euvesicatoria",
+      "crop": "Pepper Bell",
+      "pathogen_type": "Bacterial",
+      "risk_level": "High",
+      "description": "Bacterial spot of pepper is caused by Xanthomonas species and is one of the most serious diseases of pepper worldwide.",
+      "symptoms": [
+        "Small, dark, water-soaked spots on leaves",
+        "Spots become raised, scab-like on fruit",
+        "Severe defoliation in wet conditions",
+        "Fruit spots reduce marketability"
+      ],
+      "causes": [
+        "Xanthomonas euvesicatoria bacteria",
+        "Warm, wet conditions",
+        "Contaminated seed",
+        "Rain and overhead irrigation splash"
+      ],
+      "immediate_actions": [
+        "Avoid handling plants when wet",
+        "Remove severely infected plants",
+        "Apply copper-based bactericide if locally approved. Use only locally approved agricultural products according to label instructions and local agricultural guidance.",
+        "Switch to drip irrigation"
+      ],
+      "preventive_actions": [
+        "Use certified disease-free seed",
+        "Use resistant pepper varieties",
+        "Practice crop rotation (2+ years with non-solanaceous crops)",
+        "Sanitize tools and equipment",
+        "Avoid working in wet fields"
+      ],
+      "monitoring_advice": [
+        "Inspect transplants before planting",
+        "Monitor after rain events",
+        "Check for leaf spots and fruit scab"
+      ],
+      "environmental_conditions": {
+        "optimal_temperature": "25–30°C",
+        "humidity": "High humidity with rain promotes spread",
+        "rainfall": "Rain splash is the primary dispersal mechanism"
+      },
+      "expert_escalation": "Consult for resistance management and integrated disease management programs."
+    },
+    {
+      "id": "pepper_healthy",
+      "name": "Healthy",
+      "scientific_name": "N/A",
+      "crop": "Pepper Bell",
+      "pathogen_type": "None",
+      "risk_level": "Low",
+      "description": "The pepper plant appears healthy with no visible signs of disease.",
+      "symptoms": ["No disease symptoms detected"],
+      "causes": ["N/A — Plant is healthy"],
+      "immediate_actions": [
+        "No immediate action required",
+        "Continue standard care"
+      ],
+      "preventive_actions": [
+        "Maintain proper watering and fertilization",
+        "Practice crop rotation",
+        "Monitor for pests such as aphids and pepper weevils"
+      ],
+      "monitoring_advice": [
+        "Weekly visual inspections",
+        "Monitor for insect pests",
+        "Watch for signs of nutrient deficiency"
+      ],
+      "environmental_conditions": {
+        "optimal_temperature": "21–29°C",
+        "humidity": "Moderate",
+        "rainfall": "Consistent moisture without waterlogging"
+      },
+      "expert_escalation": "Routine consultation if desired."
+    }
+  ]
+}
