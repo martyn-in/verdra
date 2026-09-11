@@ -367,24 +367,12 @@ function Landing({
           className="hero-bg-video"
           ref={(el) => {
             if (el) {
-              el.playbackRate = 0.8;
+              el.playbackRate = 0.6;
             }
           }}
         >
           <source src="/videos/verdra-field-hero.mp4" type="video/mp4" />
         </video>
-
-        {/* Layer 1: soft left-to-right cream/white gradient for text readability */}
-        <div className="hero-overlay-gradient" />
-
-        {/* Layer 2: very subtle green radial glow toward the right side */}
-        <div className="hero-overlay-glow" />
-
-        {/* Layer 3: soft vignette around edges */}
-        <div className="hero-overlay-vignette" />
-
-        {/* Bottom smooth fade to seamlessly cover any bottom white gap */}
-        <div className="hero-overlay-bottom" />
 
         <header className="landing-nav container" style={{ position: "relative", zIndex: 3 }}>
           <Logo />
