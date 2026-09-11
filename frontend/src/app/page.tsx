@@ -367,7 +367,7 @@ function Landing({
           className="hero-bg-video"
           ref={(el) => {
             if (el) {
-              el.playbackRate = 0.6;
+              el.playbackRate = 0.5;
             }
           }}
         >
