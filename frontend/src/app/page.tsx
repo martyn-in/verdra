@@ -379,6 +379,9 @@ function Landing({
         {/* Layer 3: soft vignette around edges */}
         <div className="hero-overlay-vignette" />
 
+        {/* Bottom smooth fade to seamlessly cover any bottom white gap */}
+        <div className="hero-overlay-bottom" />
+
         <header className="landing-nav container" style={{ position: "relative", zIndex: 3 }}>
           <Logo />
 
@@ -498,42 +501,6 @@ function Landing({
                 Weather-aware spread risk
               </motion.span>
             </motion.div>
-          </div>
-
-          <div className="hero-visual">
-            <div className="leaf-stage">
-              <div className="scan-corners" />
-
-              <div className="leaf-art">
-                <Leaf size={180} strokeWidth={1} />
-              </div>
-
-              {/* Agri-Tech Floating Intelligence Cards */}
-              <div className="floating-card result-float">
-                <span className="mini-label">VERDRA INFERENCE</span>
-                <strong>Real Model Inference</strong>
-                <div className="mini-row">
-                  <CheckCircle2 size={16} />
-                  MobileNetV2 Neural Network
-                </div>
-              </div>
-
-              <div className="floating-card weather-float">
-                <Sun size={22} />
-                <div>
-                  <span className="mini-label">METEOROLOGY</span>
-                  <strong>Weather Context</strong>
-                </div>
-              </div>
-
-              <div className="floating-card gradcam-float">
-                <Eye size={22} />
-                <div>
-                  <span className="mini-label">EXPLAINABLE AI</span>
-                  <strong>Explainable Grad-CAM</strong>
-                </div>
-              </div>
-            </div>
           </div>
         </section>
       </div>
