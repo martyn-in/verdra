@@ -362,11 +362,10 @@ function Landing({
           muted
           loop
           playsInline
-          preload="metadata"
+          preload="auto"
           poster="/images/verdra-hero-poster.jpg"
           className="hero-bg-video"
         >
-          <source src="/videos/verdra-field-hero.webm" type="video/webm" />
           <source src="/videos/verdra-field-hero.mp4" type="video/mp4" />
         </video>
 
