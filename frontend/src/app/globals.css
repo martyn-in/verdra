@@ -215,7 +215,7 @@ h3,
   background-position: center bottom;
 }
 
-/* Background video - perfectly steady, slow 3-clip transition */
+/* Background video - perfectly steady, ultra-slow 3-clip transition */
 .hero-bg-video {
   position: absolute;
   top: 0;
@@ -225,7 +225,6 @@ h3,
   object-fit: cover;
   pointer-events: none;
   z-index: 0;
-  filter: contrast(1.05) saturate(1.10) brightness(0.95);
 }
 
 .landing-nav {
