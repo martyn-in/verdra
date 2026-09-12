@@ -668,7 +668,7 @@ function Shell({
       )}
 
       <div className="workspace">
-        <div className="mobile-header" style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+        <div className="mobile-header">
           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
             <button className="icon-button" onClick={() => setOpen(true)}>
               <Menu size={22} />
@@ -2316,19 +2316,7 @@ export default function VerdraApp() {
       {view === "model_info" && <ModelInfoPage navigate={navigate} />}
 
       {view === "hotspots" && (
-        <div className="page" style={{ maxWidth: 1100, margin: "0 auto", padding: "24px 20px" }}>
-          <div className="page-header">
-            <div>
-              <span className="page-kicker">EPIDEMIOLOGICAL RECONNAISSANCE</span>
-              <h1>Field Health Map &amp; Cluster Alerts</h1>
-              <p>Real-time geospatial hotspot detection across farm plots based on verified scan records.</p>
-            </div>
-          </div>
-          <div style={{ display: "flex", flexDirection: "column", gap: 24, marginTop: 24 }}>
-            <NearbyRiskAlerts />
-            <FieldHotspotMap />
-          </div>
-        </div>
+        <FieldHotspotMap onNavigate={navigate} />
       )}
     </Shell>
   );

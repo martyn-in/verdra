@@ -422,9 +422,6 @@ export default function FarmHealthPage() {
           </div>
         </div>
 
-        {/* Nearby-Risk Alerts (Triggered from >= 3 matching scans in 72h) */}
-        <NearbyRiskAlerts fieldId={selectedFarmId} />
-
         {/* Real Field Health Hotspot Map */}
         <FieldHotspotMap fieldId={selectedFarmId} />
 
