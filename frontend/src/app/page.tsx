@@ -1044,37 +1044,8 @@ function ScanPage({
       const optimized = await optimizeImageForInference(f);
       const q: QualityCheck = await checkQuality(optimized);
       setQuality(q);
-      if (q.leaf_validation && !q.leaf_validation.valid_leaf) {
-        setError(
-          q.leaf_validation.message ||
-            "This image does not appear to contain a crop leaf. Please upload a clear leaf photograph."
-        );
-      } else if (!q.pass) {
-        setError(
-          "Please upload a clearer crop-leaf image for reliable analysis."
-        );
-      } else {
-        setError("");
-      }
-    } catch (err: any) {
-      const msg = err?.message || "";
-      if (msg === "Backend connection blocked.") {
-        setError("Backend connection blocked.");
-      } else if (msg === "Prediction endpoint not found.") {
-        setError("Prediction endpoint not found.");
-      } else if (msg === "AI model service error.") {
-        setError("AI model service error.");
-      } else if (msg === "Crop analysis service unavailable.") {
-        setError("Crop analysis service unavailable.");
-      } else if (err?.payload?.leaf_validation?.message) {
-        setError(err.payload.leaf_validation.message);
-      } else if (msg.includes("NEXT_PUBLIC_API_URL is not configured")) {
-        setError("Verdra configuration error: NEXT_PUBLIC_API_URL is not configured.");
-      } else if (msg) {
-        setError(msg);
-      } else {
-        setQuality({ quality: "Good", score: 85, pass: true, issues: [] });
-      }
+    } catch {
+      setQuality(null);
     } finally {
       setCheckingQuality(false);
     }
@@ -1126,22 +1097,7 @@ function ScanPage({
 
   async function analyze() {
     if (!file) {
-      setError("Upload a clear crop leaf image first.");
-      return;
-    }
-
-    if (quality && quality.leaf_validation && !quality.leaf_validation.valid_leaf) {
-      setError(
-        quality.leaf_validation.message ||
-          "This image does not appear to contain a crop leaf. Please upload a clear leaf photograph."
-      );
-      return;
-    }
-
-    if (quality && !quality.pass) {
-      setError(
-        "Please upload a clearer crop-leaf image for reliable analysis."
-      );
+      setError("Please select or capture a crop leaf image first.");
       return;
     }
 
@@ -1168,6 +1124,21 @@ function ScanPage({
         setError("AI model service error.");
       } else if (msg === "Crop analysis service unavailable.") {
         setError("Crop analysis service unavailable.");
+      } else if (msg.includes("blurry") || e?.payload?.rejection_reason === "extreme_blur") {
+        setError("Image is too blurry. Please capture a sharper leaf image.");
+      } else if (
+        msg.includes("No crop leaf detected") ||
+        msg.includes("not appear to contain a crop leaf") ||
+        e?.payload?.reason === "not_leaf" ||
+        e?.payload?.error_code === "NOT_A_LEAF"
+      ) {
+        setError("No crop leaf detected. Please upload a leaf image.");
+      } else if (msg.includes("confidently identify") || msg.includes("UNCERTAIN")) {
+        setError("Verdra could not confidently identify this leaf.");
+      } else if (e?.payload?.message) {
+        setError(e.payload.message);
+      } else if (e?.payload?.detail && typeof e.payload.detail === "string") {
+        setError(e.payload.detail);
       } else if (
         msg.includes("temporarily unavailable") ||
         msg.includes("could not connect") ||
@@ -1175,8 +1146,6 @@ function ScanPage({
         msg.includes("NetworkError")
       ) {
         setError("Crop analysis service unavailable.");
-      } else if (e?.payload?.leaf_validation?.message) {
-        setError(e.payload.leaf_validation.message);
       } else {
         setError(msg || "Crop analysis service unavailable.");
       }

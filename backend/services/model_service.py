@@ -132,10 +132,22 @@ def get_class_names() -> list:
 
 
 def preprocess_image(image_bytes: bytes, target_size: tuple = (224, 224)) -> np.ndarray:
-    """Preprocess an image into normalized float32 tensor."""
-    img = Image.open(io.BytesIO(image_bytes)).convert("RGB")
+    """
+    Preprocess image bytes into normalized float32 RGB tensor:
+    1. Read via PIL.
+    2. Convert strictly to 3-channel RGB (preventing RGBA, CMYK, or grayscale mismatch).
+    3. Resize to model input size (224, 224) via Lanczos resampling.
+    4. Normalize pixel values to [0.0, 1.0] float32.
+    """
+    img = Image.open(io.BytesIO(image_bytes))
+    if img.mode != "RGB":
+        img = img.convert("RGB")
     img = img.resize(target_size, Image.LANCZOS)
     img_array = np.array(img, dtype=np.float32) / 255.0
+    if len(img_array.shape) == 2:
+        img_array = np.stack([img_array] * 3, axis=-1)
+    elif img_array.shape[-1] > 3:
+        img_array = img_array[..., :3]
     return img_array
 
 

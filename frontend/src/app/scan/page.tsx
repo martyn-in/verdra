@@ -162,18 +162,24 @@ export default function ScanPage() {
         predRes = await api.predict(compressed, crop, fieldTag);
       } catch (predErr: any) {
         // Check for non-leaf rejection (HTTP 422 with NOT_A_LEAF error)
-        if (predErr?.payload?.error_code === "NOT_A_LEAF" || predErr?.payload?.code === "NOT_A_LEAF") {
+        if (
+          predErr?.payload?.reason === "not_leaf" ||
+          predErr?.payload?.error_code === "NOT_A_LEAF" ||
+          predErr?.payload?.code === "NOT_A_LEAF"
+        ) {
           clearInterval(stepInterval);
-          setError(
-            "Verdra could not detect a valid crop leaf in this image. Please upload a clear crop-leaf photograph."
-          );
+          setError("No crop leaf detected. Please upload a leaf image.");
           setAnalyzing(false);
           return;
         }
         // Check for quality rejection
-        if (predErr?.status === 422) {
+        if (predErr?.payload?.reason === "image_quality_failed" || predErr?.status === 422) {
           clearInterval(stepInterval);
-          setError(predErr.message || "Image quality is insufficient for reliable analysis. Please capture a clearer leaf image.");
+          setError(
+            predErr?.payload?.message ||
+              predErr?.message ||
+              "Image is too blurry. Please capture a sharper leaf image."
+          );
           setAnalyzing(false);
           return;
         }

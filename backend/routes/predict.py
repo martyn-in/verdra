@@ -158,46 +158,79 @@ async def execute_real_inference_pipeline(
         model_service.load_model()
 
     if not model_service.is_model_loaded():
-        raise HTTPException(
-            status_code=503,
-            detail="AI model not configured: Trained model weights ('agri_vision_model.keras') are missing or not loaded."
-        )
+        logger.error("Inference rejected: model_error (agri_vision_model.keras not loaded)")
+        return {
+            "valid_leaf": False,
+            "reason": "model_error",
+            "error_code": "MODEL_UNAVAILABLE",
+            "message": "Crop analysis service unavailable.",
+            "detail": "Crop analysis service unavailable.",
+            "diagnostics": [],
+            "image_quality": {"pass": False, "quality": "Poor", "score": 0},
+        }
 
     # 2. Input quality check
     quality = image_quality_service.check_image_quality(image_bytes)
-    if not quality["pass"]:
-        msg = "Image quality is insufficient for reliable analysis. Please capture a clearer leaf image in good lighting."
+    if not quality.get("pass", True):
+        rejection_msg = quality.get("message") or "Image is too blurry. Please capture a sharper leaf image."
+        logger.warning(f"Inference rejected: image_quality_failed - {rejection_msg}")
         return {
             "valid_leaf": False,
+            "reason": "image_quality_failed",
             "error_code": "POOR_IMAGE_QUALITY",
-            "message": msg,
-            "detail": msg,
+            "message": rejection_msg,
+            "detail": rejection_msg,
             "diagnostics": quality.get("issues", []),
-            "image_quality": quality
+            "image_quality": quality,
         }
 
     # 3. Leaf validation
     leaf_check = leaf_validator_service.predict(image_bytes)
     if not leaf_check.get("valid_leaf", False):
-        msg = "This image does not appear to contain a crop leaf. Please upload a clear leaf photograph."
+        leaf_prob = float(leaf_check.get("leaf_probability", 0.0))
+        rejection_msg = leaf_check.get("message") or "No crop leaf detected. Please upload a leaf image."
+        logger.warning(f"Inference rejected: not_leaf (leaf_probability={leaf_prob:.4f}) - {rejection_msg}")
         return {
             "valid_leaf": False,
+            "reason": "not_leaf",
             "error_code": "NOT_A_LEAF",
-            "message": msg,
-            "detail": msg,
-            "leaf_probability": leaf_check.get("leaf_probability", 0.0),
-            "leaf_score": leaf_check.get("leaf_score", 0.0),
-            "threshold": leaf_check.get("threshold", 0.60),
+            "message": rejection_msg,
+            "detail": rejection_msg,
+            "leaf_probability": leaf_prob,
+            "leaf_score": leaf_prob,
+            "threshold": leaf_check.get("threshold", 0.50),
             "diagnostics": leaf_check.get("diagnostics", {}),
-            "image_quality": quality
+            "image_quality": quality,
         }
 
-    # 4. Real AI Model Prediction
+    # 4. Supported crop host check
+    supported_crops = {"tomato", "potato", "pepper", "pepper_bell", "bell pepper", "auto", "none", ""}
+    clean_crop = (crop or "auto").lower().strip()
+    if clean_crop not in supported_crops:
+        rejection_msg = f"Selected crop '{crop}' is not supported by the trained model (supported: Tomato, Potato, Pepper)."
+        logger.warning(f"Inference rejected: unsupported_crop - {rejection_msg}")
+        return {
+            "valid_leaf": False,
+            "reason": "unsupported_crop",
+            "error_code": "UNSUPPORTED_CROP",
+            "message": rejection_msg,
+            "detail": rejection_msg,
+            "image_quality": quality,
+        }
+
+    # 5. Real AI Model Prediction
     try:
         pred_res = model_service.predict(image_bytes, crop=crop, top_k=3)
     except Exception as e:
-        logger.error(f"Inference error: {e}")
-        raise HTTPException(status_code=500, detail=f"Real AI inference error: {str(e)}")
+        logger.error(f"Inference rejected: model_error ({e})")
+        return {
+            "valid_leaf": False,
+            "reason": "model_error",
+            "error_code": "MODEL_INFERENCE_ERROR",
+            "message": "Crop analysis service unavailable.",
+            "detail": f"AI model service error: {str(e)}",
+            "image_quality": quality,
+        }
 
     pred_res["valid_leaf"] = True
     pred_res["leaf_score"] = leaf_check.get("leaf_score", 1.0)
@@ -218,7 +251,7 @@ async def execute_real_inference_pipeline(
     top2_conf = float(top_preds[1].get("confidence", 0.0)) if len(top_preds) > 1 else 0.0
     margin = top1_conf - top2_conf
 
-    # 5. Determine Confidence Level & Explanation
+    # 6. Determine Confidence Level & Explanation
     uncertain_reasons = []
     if conf < CONFIDENCE_MIN_ACCEPTED:
         uncertain_reasons.append(f"Confidence score ({conf*100:.1f}%) is below the accepted certainty threshold ({CONFIDENCE_MIN_ACCEPTED*100:.0f}%).")
@@ -236,7 +269,7 @@ async def execute_real_inference_pipeline(
             "scan_id": scan_id,
             "status": "UNCERTAIN",
             "confidence_level": "UNCERTAIN",
-            "confidence_message": "Verdra cannot confidently identify this disease from the current image.",
+            "confidence_message": "Verdra could not confidently identify this leaf.",
             "confidence": conf,
             "valid_leaf": True,
             "leaf_score": leaf_check.get("leaf_score", 1.0),
