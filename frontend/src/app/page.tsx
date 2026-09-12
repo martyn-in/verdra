@@ -44,6 +44,9 @@ import {
 } from "react";
 import { motion } from "framer-motion";
 
+import dynamic from "next/dynamic";
+import { useTranslation } from "@/context/LanguageContext";
+
 import {
   API_URL,
   analyzeCrop,
@@ -57,8 +60,12 @@ import ExpertShareModal from "@/components/results/ExpertShareModal";
 import DiseaseProgressionTimeline from "@/components/results/DiseaseProgressionTimeline";
 import LanguageSelector from "@/components/common/LanguageSelector";
 import OfflineQueueBadge from "@/components/common/OfflineQueueBadge";
-import FieldHotspotMap from "@/components/results/FieldHotspotMap";
 import NearbyRiskAlerts from "@/components/results/NearbyRiskAlerts";
+
+const FieldHotspotMap = dynamic(
+  () => import("@/components/results/FieldHotspotMap"),
+  { ssr: false }
+);
 
 type View = "landing" | "dashboard" | "scan" | "result" | "history" | "model_info" | "hotspots";
 
@@ -364,6 +371,8 @@ function Landing({
 }: {
   navigate: (view: View) => void;
 }) {
+  const { t } = useTranslation();
+
   return (
     <main className="landing">
       {/* ===== CINEMATIC HERO SECTION ===== */}
@@ -391,24 +400,30 @@ function Landing({
           <Logo />
 
           <nav className="landing-links">
-            <a href="#how">How It Works</a>
-            <a href="#crops">Supported Crops</a>
-            <a href="#features">Features</a>
+            <a href="#how">{t("landing.how_it_works", "How It Works")}</a>
+            <a href="#crops">{t("landing.supported_crops", "Supported Crops")}</a>
+            <a href="#features">{t("landing.features", "Features")}</a>
             <button
               className="text-button"
               onClick={() => navigate("dashboard")}
             >
-              Dashboard
+              {t("landing.dashboard", "Dashboard")}
             </button>
           </nav>
 
-          <button
-            className="button primary"
-            onClick={() => navigate("scan")}
-          >
-            <ScanLine size={18} />
-            Scan Your Crop
-          </button>
+          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+            <div style={{ width: 145 }}>
+              <LanguageSelector direction="down" />
+            </div>
+
+            <button
+              className="button primary"
+              onClick={() => navigate("scan")}
+            >
+              <ScanLine size={18} />
+              {t("landing.scan_your_crop", "Scan Your Crop")}
+            </button>
+          </div>
         </header>
 
         <section className="hero container">
@@ -418,8 +433,8 @@ function Landing({
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.7, delay: 0.1, ease: "easeOut" }}
             >
-              See Crop Disease
-              <span> Before It Spreads.</span>
+              {t("landing.hero_title", "See Crop Disease")}
+              <span>{t("landing.hero_title_highlight", " Before It Spreads.")}</span>
             </motion.h1>
 
             <motion.p
@@ -427,9 +442,7 @@ function Landing({
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.65, delay: 0.2, ease: "easeOut" }}
             >
-              Verdra uses deep learning to identify crop diseases from leaf
-              images, evaluate environmental conditions and provide actionable
-              crop-care recommendations.
+              {t("landing.hero_subtitle", "Verdra uses deep learning to identify crop diseases from leaf images, evaluate environmental conditions and provide actionable crop-care recommendations.")}
             </motion.p>
 
             <motion.div
@@ -442,12 +455,12 @@ function Landing({
                 className="button primary large"
                 onClick={() => navigate("scan")}
               >
-                Scan Your Crop
+                {t("landing.get_started", "Scan Your Crop")}
                 <ArrowRight size={18} />
               </button>
 
               <a className="button secondary large" href="#how">
-                How It Works
+                {t("landing.how_it_works_btn", "How It Works")}
               </a>
             </motion.div>
           </div>
@@ -602,6 +615,7 @@ function Shell({
   scanCount: number;
   children: React.ReactNode;
 }) {
+  const { t } = useTranslation();
   const [open, setOpen] = useState(false);
 
   const item = (
@@ -637,12 +651,12 @@ function Shell({
         </div>
 
         <div className="nav-group">
-          <span className="nav-label">Workspace</span>
-          {item("dashboard", "Dashboard", Home)}
-          {item("scan", "Scan Crop", ScanLine)}
-          {item("history", "History", History, scanCount)}
-          {item("hotspots", "Field Health Map", MapPin)}
-          {item("model_info", "Model Info", Cpu)}
+          <span className="nav-label">{t("nav.workspace", "Workspace")}</span>
+          {item("dashboard", t("nav.dashboard", "Dashboard"), Home)}
+          {item("scan", t("nav.scan", "Scan Crop"), ScanLine)}
+          {item("history", t("nav.history", "History"), History, scanCount)}
+          {item("hotspots", t("nav.hotspots", "Field Health Map"), MapPin)}
+          {item("model_info", t("nav.model_info", "Model Info"), Cpu)}
         </div>
 
         <div className="sidebar-bottom" style={{ display: "flex", flexDirection: "column", gap: 10 }}>
@@ -651,7 +665,7 @@ function Shell({
           <div className="profile-card">
             <span className="avatar">FM</span>
             <div>
-              <strong>Farm Manager</strong>
+              <strong>{t("nav.farm_manager", "Farm Manager")}</strong>
               <small>Verdra Workspace</small>
             </div>
           </div>
@@ -691,6 +705,7 @@ function Dashboard({
   navigate: (view: View) => void;
   onSelectResult: (result: Prediction) => void;
 }) {
+  const { t } = useTranslation();
   const [liveWeather, setLiveWeather] = useState<any>(null);
   const [weatherError, setWeatherError] = useState(false);
 
@@ -722,48 +737,48 @@ function Dashboard({
     <div className="page">
       <div className="page-header">
         <div>
-          <span className="page-kicker">CROP HEALTH OVERVIEW</span>
-          <h1>Good evening, Farmer.</h1>
+          <span className="page-kicker">{t("dashboard.kicker", "CROP HEALTH OVERVIEW")}</span>
+          <h1>{t("dashboard.greeting", "Good day, Farmer.")}</h1>
           <p>
-            Here is a clear view of your real crop monitoring activity.
+            {t("dashboard.subtitle", "Here is a clear view of your real crop monitoring activity.")}
           </p>
         </div>
 
         <button className="button primary" onClick={() => navigate("scan")}>
           <ScanLine size={18} />
-          Scan New Crop
+          {t("dashboard.scan_new", "Scan New Crop")}
         </button>
       </div>
 
       <section className="stats-grid">
         <StatCard
           icon={ScanLine}
-          label="Total Scans"
+          label={t("dashboard.total_scans", "Total Scans")}
           value={history.length}
-          note="Real completed analyses"
+          note={t("dashboard.total_scans_note", "Real completed analyses")}
         />
 
         <StatCard
           icon={CheckCircle2}
-          label="Healthy Plants"
+          label={t("dashboard.healthy_plants", "Healthy Plants")}
           value={healthy}
-          note="Healthy foliage results"
+          note={t("dashboard.healthy_plants_note", "Healthy foliage results")}
           tone="green"
         />
 
         <StatCard
           icon={Leaf}
-          label="Diseased Plants"
+          label={t("dashboard.diseased_plants", "Diseased Plants")}
           value={diseased}
-          note="Cases requiring attention"
+          note={t("dashboard.diseased_plants_note", "Cases requiring attention")}
           tone="amber"
         />
 
         <StatCard
           icon={AlertTriangle}
-          label="High-Risk Cases"
+          label={t("dashboard.high_risk", "High-Risk Cases")}
           value={highRisk}
-          note="Environmental risk alerts"
+          note={t("dashboard.high_risk_note", "Environmental risk alerts")}
           tone="red"
         />
       </section>
@@ -772,8 +787,8 @@ function Dashboard({
         <section className="panel large-panel">
           <div className="panel-heading">
             <div>
-              <span className="panel-kicker">RECENT ANALYSIS</span>
-              <h2>Recent Scans</h2>
+              <span className="panel-kicker">{t("dashboard.recent_scans_kicker", "RECENT ANALYSIS")}</span>
+              <h2>{t("dashboard.recent_scans", "Recent Scans")}</h2>
             </div>
             {history.length > 0 && (
               <button
@@ -781,7 +796,7 @@ function Dashboard({
                 onClick={() => navigate("history")}
                 style={{ color: "var(--green)", fontWeight: 700, fontSize: 12 }}
               >
-                View all ({history.length})
+                {t("dashboard.view_all", "View all")} ({history.length})
               </button>
             )}
           </div>
@@ -789,8 +804,8 @@ function Dashboard({
           {history.length === 0 ? (
             <EmptyState
               icon={Leaf}
-              title="No crop scans yet."
-              body="Run your first real crop analysis to start building your Verdra history."
+              title={t("dashboard.no_scans_title", "No crop scans yet.")}
+              body={t("dashboard.no_scans_body", "Run your first real crop analysis to start building your Verdra history.")}
               action={() => navigate("scan")}
             />
           ) : (
@@ -809,7 +824,7 @@ function Dashboard({
                   </div>
 
                   <div className="history-value">
-                    <small>Confidence</small>
+                    <small>{t("result.confidence", "Confidence")}</small>
                     <strong>{typeof item?.confidence === "number" ? item.confidence.toFixed(1) : (item?.confidence || 0)}%</strong>
                   </div>
 
@@ -825,8 +840,8 @@ function Dashboard({
         <section className="panel weather-panel">
           <div className="panel-heading">
             <div>
-              <span className="panel-kicker">CURRENT WEATHER</span>
-              <h2>Environmental Context</h2>
+              <span className="panel-kicker">{t("dashboard.weather_kicker", "CURRENT WEATHER")}</span>
+              <h2>{t("dashboard.weather_title", "Environmental Context")}</h2>
             </div>
           </div>
 
@@ -840,7 +855,7 @@ function Dashboard({
               <div className="weather-mini-grid">
                 <MiniWeather
                   icon={Droplets}
-                  label="Humidity"
+                  label={t("dashboard.humidity", "Humidity")}
                   value={
                     currentWeather.humidity !== null
                       ? `${currentWeather.humidity}%`
@@ -849,7 +864,7 @@ function Dashboard({
                 />
                 <MiniWeather
                   icon={CloudRain}
-                  label="Rainfall"
+                  label={t("dashboard.rainfall", "Rainfall")}
                   value={
                     currentWeather.rainfall !== null
                       ? `${currentWeather.rainfall} mm`
@@ -992,6 +1007,7 @@ function ScanPage({
 }: {
   onResult: (result: Prediction) => void;
 }) {
+  const { t } = useTranslation();
   const [file, setFile] = useState<File | null>(null);
   const [preview, setPreview] = useState("");
   const [crop, setCrop] = useState("Auto Detect");
@@ -1156,10 +1172,9 @@ function ScanPage({
       <div className="page-header narrow">
         <div>
           <span className="page-kicker">REAL AI CROP ANALYSIS</span>
-          <h1>Scan a Crop</h1>
+          <h1>{t("scan.title", "Scan a Crop")}</h1>
           <p>
-            Upload a clear photograph of a single crop leaf for AI-assisted
-            disease analysis.
+            {t("scan.subtitle", "Upload a clear photograph of a single crop leaf for AI-assisted disease analysis.")}
           </p>
         </div>
       </div>
@@ -1174,7 +1189,7 @@ function ScanPage({
             onClick={() => setScanMode("single")}
           >
             <ScanLine size={15} />
-            Single Scan
+            {t("scan.mode_single", "Single Scan")}
           </button>
           <button
             type="button"
@@ -1183,7 +1198,7 @@ function ScanPage({
             onClick={() => setScanMode("batch")}
           >
             <Layers size={15} />
-            Batch Scan (2–10 Leaves)
+            {t("scan.mode_batch", "Batch Scan (2–10 Leaves)")}
           </button>
         </div>
       </div>
@@ -1224,12 +1239,12 @@ function ScanPage({
                         <UploadCloud size={30} />
                       </span>
 
-                      <h2>Drop your crop leaf image here</h2>
+                      <h2>{t("scan.drag_drop", "Drop your crop leaf image here")}</h2>
 
-                      <p>or click to browse from your device</p>
+                      <p>{t("scan.browse_files", "or click to browse from your device")}</p>
 
                       <span className="upload-help">
-                        JPG, JPEG, PNG, WEBP • Maximum 10 MB
+                        {t("scan.supported_formats", "JPG, JPEG, PNG, WEBP • Maximum 10 MB")}
                       </span>
 
                       <div className="upload-action-row">
@@ -1246,7 +1261,7 @@ function ScanPage({
                           }}
                         >
                           <Camera size={16} />
-                          Capture Camera
+                          {t("scan.capture_camera", "Capture Camera")}
                         </button>
 
                         <button
@@ -1258,7 +1273,7 @@ function ScanPage({
                           }}
                         >
                           <UploadCloud size={16} />
-                          Browse Files
+                          {t("scan.browse_files", "Browse Files")}
                         </button>
                       </div>
                     </div>
@@ -1322,7 +1337,7 @@ function ScanPage({
 
               {/* Supported Crops */}
               <div className="crop-select-section">
-                <span className="form-label">Select Crop Type (Supported by Trained Model)</span>
+                <span className="form-label">{t("scan.crop_label", "Target Crop")}</span>
 
                 <div className="crop-options">
                   {["Auto Detect", "Tomato", "Potato", "Pepper"].map((item) => (
@@ -1332,7 +1347,7 @@ function ScanPage({
                       onClick={() => setCrop(item)}
                     >
                       <Leaf size={16} />
-                      {item}
+                      {item === "Auto Detect" ? t("scan.auto_detect", "Auto Detect (Recommended)") : item}
                     </button>
                   ))}
                 </div>
@@ -1374,7 +1389,7 @@ function ScanPage({
                 onClick={analyze}
               >
                 <ScanLine size={19} />
-                Analyze Crop
+                {t("scan.analyze_crop", "Analyze Crop")}
                 <ArrowRight size={18} />
               </button>
             </>
@@ -1481,6 +1496,7 @@ function ResultPage({
   onSaveScan: (item: Prediction) => void;
   isSaved: boolean;
 }) {
+  const { t } = useTranslation();
   const [showGradcam, setShowGradcam] = useState(false);
   const [shareModalOpen, setShareModalOpen] = useState(false);
 
@@ -1517,7 +1533,7 @@ function ResultPage({
             onClick={() => setShareModalOpen(true)}
           >
             <Share2 size={17} />
-            Share With Expert
+            {t("result.share_expert", "Share With Expert")}
           </button>
 
           <button
@@ -1527,12 +1543,12 @@ function ResultPage({
             {isSaved ? (
               <>
                 <Check size={17} />
-                Saved to History
+                {t("result.saved", "Saved to History")}
               </>
             ) : (
               <>
                 <FileCheck size={17} />
-                Save Scan
+                {t("result.save_scan", "Save Scan")}
               </>
             )}
           </button>
@@ -1748,9 +1764,10 @@ function ResultPage({
         <VoiceReadout
           crop={result.crop}
           disease={result.disease}
+          confidence={result.confidence}
           confidenceExplanation={result.uncertaintyMessage || (result.confidence >= 80 ? "The model strongly favors this disease class." : "The model shows moderate confidence.")}
-          severity={result.severity.level}
-          risk={result.risk.level}
+          severity={result.severity}
+          risk={result.risk}
           immediateAction={result.recommendations?.immediate?.[0] || "Inspect foliage and prune affected leaves."}
         />
       </div>
@@ -1916,20 +1933,22 @@ function HistoryPage({
   onDeleteScan: (id: string) => void;
   navigate: (view: View) => void;
 }) {
+  const { t } = useTranslation();
+
   return (
     <div className="page">
       <div className="page-header">
         <div>
-          <span className="page-kicker">SAVED ARCHIVE</span>
-          <h1>Diagnostic History</h1>
+          <span className="page-kicker">{t("history_page.kicker", "SAVED ARCHIVE")}</span>
+          <h1>{t("history_page.title", "Diagnostic History")}</h1>
           <p>
-            Review genuine historical crop health analyses performed on your farm.
+            {t("history_page.subtitle", "Review genuine historical crop health analyses performed on your farm.")}
           </p>
         </div>
 
         <button className="button primary" onClick={() => navigate("scan")}>
           <ScanLine size={18} />
-          Scan New Crop
+          {t("dashboard.scan_new", "Scan New Crop")}
         </button>
       </div>
 
@@ -1937,8 +1956,8 @@ function HistoryPage({
         <section className="panel" style={{ padding: "40px" }}>
           <EmptyState
             icon={History}
-            title="No crop scans yet."
-            body="Saved real predictions will appear here for longitudinal crop scouting."
+            title={t("dashboard.no_scans_title", "No crop scans yet.")}
+            body={t("dashboard.no_scans_body", "Saved real predictions will appear here for longitudinal crop scouting.")}
             action={() => navigate("scan")}
           />
         </section>
@@ -1963,12 +1982,12 @@ function HistoryPage({
 
                 <div className="history-card-stats">
                   <div>
-                    <small>Confidence</small>
+                    <small>{t("result.confidence", "Confidence")}</small>
                     <strong>{typeof item?.confidence === "number" ? item.confidence.toFixed(1) : (item?.confidence || 0)}%</strong>
                   </div>
                   <div>
-                    <small>Severity</small>
-                    <strong>{item.severity.level}</strong>
+                    <small>{t("result.severity", "Severity")}</small>
+                    <strong>{typeof item?.severity === "object" ? (item?.severity?.level || "Moderate") : item?.severity}</strong>
                   </div>
                 </div>
 
@@ -1982,13 +2001,13 @@ function HistoryPage({
                     style={{ flex: 1, minHeight: 38, fontSize: 12 }}
                     onClick={() => onSelectResult(item)}
                   >
-                    View Result
+                    {t("history_page.open_result", "View Result")}
                   </button>
                   <button
                     className="button secondary"
                     style={{ minHeight: 38, padding: "0 12px" }}
                     onClick={() => onDeleteScan(item.id)}
-                    title="Delete Scan"
+                    title={t("history_page.delete", "Delete Scan")}
                   >
                     <Trash2 size={16} color="var(--muted)" />
                   </button>

@@ -639,10 +639,23 @@ export default function FieldHotspotMap({
       hotspots.forEach((pin) => {
         if (typeof pin.latitude !== "number" || typeof pin.longitude !== "number") return;
 
+        const formatSeverity = (sev: any): string => {
+          if (!sev) return "None (0%)";
+          if (typeof sev === "string") return sev;
+          if (typeof sev === "object") {
+            if (sev.percentage !== null && sev.percentage !== undefined) {
+              return `${sev.level || "Moderate"} (${sev.percentage}%)`;
+            }
+            return sev.level || "Moderate";
+          }
+          return String(sev);
+        };
+
+        const sevStr = formatSeverity(pin.severity).toLowerCase();
         const markerColor =
           pin.marker_color === "green" || pin.is_healthy
             ? "#2E7D32"
-            : pin.marker_color === "amber" || pin.severity?.toLowerCase().includes("moderate")
+            : pin.marker_color === "amber" || sevStr.includes("moderate")
             ? "#D97706"
             : "#DC2626";
 
@@ -666,7 +679,7 @@ export default function FieldHotspotMap({
             <div style="font-size: 11px; color: #556059; line-height: 1.5; border-top: 1px solid #E5ECE4; padding-top: 5px;">
               Plot: <b>${pin.plot_name || "Monitored Field"}</b><br/>
               Confidence: <b>${Math.round((pin.confidence || 0) * 100)}%</b><br/>
-              Severity: <b>${pin.severity || "N/A"}</b><br/>
+              Severity: <b>${formatSeverity(pin.severity)}</b><br/>
               Recorded: <b>${pin.created_at ? new Date(pin.created_at).toLocaleDateString() : "Recent"}</b>
             </div>
           </div>
