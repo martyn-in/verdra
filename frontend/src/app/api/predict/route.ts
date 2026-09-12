@@ -144,23 +144,41 @@ export async function POST(req: NextRequest) {
       },
       recommendations: {
         immediate: isHealthy
-          ? ["Maintain balanced foliar nitrogen and phosphorus nutrition.", "Continue bi-weekly visual scouting."]
+          ? [
+              "Maintain balanced foliar nitrogen and potassium nutrition for sustained cell-wall vigor.",
+              "Ensure drip irrigation schedule maintains consistent root-zone moisture without foliar wetting.",
+              "Inspect lower canopy foliage weekly during standard scouting rounds.",
+            ]
           : [
-              `Prune and safely destroy lower leaves exhibiting ${predDisease} necrosis.`,
-              "Avoid overhead sprinkler irrigation to prevent spore splash dispersal.",
-              "Apply copper hydroxide or azoxystrobin based organic/chemical protectant within 24 hours.",
+              `Prune and safely bag all lower leaves exhibiting ${predDisease} lesions to eliminate active inoculum.`,
+              "Suspend overhead sprinkler irrigation immediately; switch to drip lines to stop splash transmission.",
+              "Apply preventive copper hydroxide (77% WP @ 2.0g/L) or azoxystrobin foliar protectant within 24 hours.",
+              "Sanitize all pruning shears and harvesting crates with 70% isopropyl alcohol between crop rows.",
             ],
         chemical: isHealthy
-          ? ["No chemical application required."]
-          : ["Copper Hydroxide 77% WP @ 2.0g/L water", "Mancozeb 75% WP @ 2.5g/L water"],
+          ? ["No chemical application required for healthy foliage."]
+          : ["Copper Hydroxide 77% WP @ 2.0g/L water", "Mancozeb 75% WP @ 2.5g/L water", "Azoxystrobin 23% SC @ 1.0ml/L water"],
         organic: isHealthy
-          ? ["Neem oil 0.5% preventive foliar mist."]
+          ? ["Neem oil 0.5% preventive foliar mist every 14 days."]
           : ["Trichoderma viride bio-fungicide foliar spray @ 5g/L", "Pseudomonas fluorescens 10g/L soil drench"],
         prevention: [
-          "Ensure 60cm row spacing to facilitate airflow through the crop canopy.",
-          "Implement strict 2-year crop rotation with non-Solanaceous species.",
-          "Sterilize pruning shears with 70% isopropyl alcohol between rows.",
+          "Enforce 60cm row spacing and indeterminate vine staking to maximize canopy airflow and rapid drying.",
+          "Implement a strict 2-3 year crop rotation with non-Solanaceous species (e.g. legumes or cereals).",
+          "Apply reflective plastic or organic straw mulch across soil beds to block soil-borne spore splash.",
+          "Select certified pathogen-free seeds and disease-resistant hybrid cultivars for subsequent plantings.",
         ],
+        monitoring: isHealthy
+          ? [
+              "Conduct routine visual scouting once every 7 days across the plot canopy.",
+              "Track local humidity spikes (>75% RH) for early fungal sporulation windows.",
+              "Inspect newly emerging terminal leaves and underside veins for early lesions.",
+            ]
+          : [
+              `Scout neighboring rows within 15 meters daily to identify secondary ${predDisease} spread.`,
+              "Re-scan affected plants within 3 to 5 days using Verdra to verify lesion stabilization.",
+              "Monitor morning leaf wetness duration; if leaves remain wet past 10:00 AM, apply protectant.",
+              "Track regional weather warnings for rainfall or fog that accelerate foliar sporulation.",
+            ],
       },
       gradcam_url: null,
       timestamp: new Date().toISOString(),

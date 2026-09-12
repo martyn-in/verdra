@@ -302,18 +302,48 @@ function normalizeResult(raw: any, imageUrl: string): Prediction {
     },
 
     recommendations: {
-      immediate: list(
-        raw?.recommendations?.immediate ||
-          raw?.immediate_actions
-      ),
-      prevention: list(
-        raw?.recommendations?.prevention ||
-          raw?.preventive_actions
-      ),
-      monitoring: list(
-        raw?.recommendations?.monitoring ||
-          raw?.monitoring_actions
-      ),
+      immediate: (() => {
+        const items = list(raw?.recommendations?.immediate || raw?.immediate_actions);
+        if (items.length > 0) return items;
+        return /healthy/i.test(raw?.disease || raw?.prediction || "")
+          ? [
+              "Maintain balanced foliar nitrogen and potassium nutrition for sustained cell-wall vigor.",
+              "Ensure drip irrigation schedule maintains consistent root-zone moisture without foliar wetting.",
+              "Inspect lower canopy foliage weekly during standard scouting rounds.",
+            ]
+          : [
+              "Prune and safely bag all lower leaves exhibiting necrotic lesions to eliminate active inoculum.",
+              "Suspend overhead sprinkler irrigation immediately; switch to drip lines to stop splash transmission.",
+              "Apply preventive copper hydroxide (77% WP @ 2.0g/L) or azoxystrobin foliar protectant within 24 hours.",
+              "Sanitize all pruning shears and harvesting crates with 70% isopropyl alcohol between crop rows.",
+            ];
+      })(),
+      prevention: (() => {
+        const items = list(raw?.recommendations?.prevention || raw?.preventive_actions);
+        if (items.length > 0) return items;
+        return [
+          "Enforce 60cm row spacing and indeterminate vine staking to maximize canopy airflow and rapid drying.",
+          "Implement a strict 2-3 year crop rotation with non-Solanaceous species (e.g. legumes or cereals).",
+          "Apply reflective plastic or organic straw mulch across soil beds to block soil-borne spore splash.",
+          "Select certified pathogen-free seeds and disease-resistant hybrid cultivars for subsequent plantings.",
+        ];
+      })(),
+      monitoring: (() => {
+        const items = list(raw?.recommendations?.monitoring || raw?.monitoring_actions || raw?.monitoring_advice);
+        if (items.length > 0) return items;
+        return /healthy/i.test(raw?.disease || raw?.prediction || "")
+          ? [
+              "Conduct routine visual scouting once every 7 days across the plot canopy.",
+              "Track local humidity spikes (>75% RH) for early fungal sporulation windows.",
+              "Inspect newly emerging terminal leaves and underside veins for early lesions.",
+            ]
+          : [
+              "Scout neighboring rows within 15 meters daily to identify secondary disease spread.",
+              "Re-scan affected plants within 3 to 5 days using Verdra to verify lesion stabilization.",
+              "Monitor morning leaf wetness duration; if leaves remain wet past 10:00 AM, apply protectant.",
+              "Track regional weather warnings for rainfall or fog that accelerate foliar sporulation.",
+            ];
+      })(),
     },
 
     imageUrl,
