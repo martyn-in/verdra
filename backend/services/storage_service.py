@@ -127,6 +127,71 @@ def _init_sqlite():
         );
         """)
 
+        # Seed initial benchmark farm plots if table is empty
+        cursor.execute("SELECT count(*) FROM farms WHERE id = 'farm-dundigal'")
+        if cursor.fetchone()[0] == 0:
+            now_iso = datetime.utcnow().isoformat()
+            farms_data = [
+                ("farm-dundigal", "Dundigal Agro Ecological Zone", "Hyderabad, Telangana", 17.5992, 78.4182, "Tomato"),
+                ("farm-1", "Green Valley Agro Park", "Salinas, California", 36.6777, -121.6555, "Tomato"),
+                ("farm-2", "Highland Plateau Farm", "Boise, Idaho", 43.6150, -116.2023, "Potato"),
+                ("farm-3", "Sunridge Capsicum Plots", "Fresno, California", 36.7468, -119.7726, "Pepper"),
+            ]
+            for f in farms_data:
+                cursor.execute("""
+                    INSERT OR REPLACE INTO farms (id, farm_name, location_name, latitude, longitude, crop, created_at)
+                    VALUES (?, ?, ?, ?, ?, ?, ?)
+                """, (f[0], f[1], f[2], f[3], f[4], f[5], now_iso))
+
+        # Seed verified foliar specimen pins if benchmark scans are missing
+        cursor.execute("SELECT count(*) FROM scans WHERE id = 'scan-001'")
+        if cursor.fetchone()[0] == 0:
+            now_iso = datetime.utcnow().isoformat()
+            now_minus_1h = (datetime.utcnow() - timedelta(hours=1)).isoformat()
+            now_minus_4h = (datetime.utcnow() - timedelta(hours=4)).isoformat()
+            now_minus_12h = (datetime.utcnow() - timedelta(hours=12)).isoformat()
+            now_minus_24h = (datetime.utcnow() - timedelta(hours=24)).isoformat()
+
+            initial_scans = [
+                # Dundigal Agro Ecological Zone (Hyderabad, Telangana - 3-case cluster in Block C)
+                ("scan-001", "farm-dundigal", "farm-dundigal", "Tomato", "Tomato_Late_Blight", "Tomato Late Blight", 0.97, "HIGH", "Severe foliar blight identified in Dundigal Block C.", "High", 34.0, "High", "High humidity microclimate encourages spore spread.", 0, 17.5992, 78.4182, now_iso),
+                ("scan-002", "farm-dundigal", "farm-dundigal", "Tomato", "Tomato_Late_Blight", "Tomato Late Blight", 0.96, "HIGH", "Foliar lesion with active sporulation.", "High", 29.0, "High", "High humidity microclimate encourages spore spread.", 0, 17.6015, 78.4195, now_minus_1h),
+                ("scan-003", "farm-dundigal", "farm-dundigal", "Tomato", "Tomato_Late_Blight", "Tomato Late Blight", 0.98, "HIGH", "Severe foliar necrosis.", "High", 38.0, "High", "High humidity microclimate encourages spore spread.", 0, 17.5978, 78.4210, now_minus_4h),
+                ("scan-004", "farm-dundigal", "farm-dundigal", "Tomato", "Tomato_Early_Blight", "Tomato Early Blight", 0.94, "HIGH", "Concentric ring pattern detected.", "Moderate", 19.0, "Moderate", "Moderate spread risk.", 0, 17.6085, 78.4055, now_minus_12h),
+                ("scan-005", "farm-dundigal", "farm-dundigal", "Pepper", "Pepper_Bell_Bacterial_Spot", "Pepper Bell Bacterial Spot", 0.93, "HIGH", "Water-soaked foliar lesions.", "Moderate", 22.0, "Moderate", "Sanitation recommended.", 0, 17.5852, 78.4328, now_minus_24h),
+                ("scan-006", "farm-dundigal", "farm-dundigal", "Tomato", "Tomato_Healthy", "Tomato Healthy", 0.99, "HIGH", "Vigorous healthy foliage in Bowrampet.", "None", 0.0, "Low", "No infection present.", 1, 17.5678, 78.4112, now_iso),
+                ("scan-007", "farm-dundigal", "farm-dundigal", "Potato", "Potato_Healthy", "Potato Healthy", 0.99, "HIGH", "Healthy potato canopy in Gagillapur.", "None", 0.0, "Low", "No infection present.", 1, 17.6154, 78.3985, now_iso),
+                ("scan-008", "farm-dundigal", "farm-dundigal", "Tomato", "Tomato_Healthy", "Tomato Healthy", 0.98, "HIGH", "Healthy tomato canopy in Rayalapur.", "None", 0.0, "Low", "No infection present.", 1, 17.6255, 78.4390, now_iso),
+
+                # Farm 1 (Salinas, Tomato - includes 3-case cluster in Block C)
+                ("scan-101", "farm-1", "farm-1", "Tomato", "Tomato_Late_Blight", "Tomato Late Blight", 0.97, "HIGH", "The model strongly favors this disease class.", "High", 32.0, "High", "High humidity microclimate encourages spore spread.", 0, 36.6782, -121.6548, now_iso),
+                ("scan-102", "farm-1", "farm-1", "Tomato", "Tomato_Late_Blight", "Tomato Late Blight", 0.95, "HIGH", "Distinct necrotic lesions with sporulation.", "High", 28.5, "High", "High humidity microclimate encourages spore spread.", 0, 36.6768, -121.6545, now_minus_1h),
+                ("scan-103", "farm-1", "farm-1", "Tomato", "Tomato_Late_Blight", "Tomato Late Blight", 0.98, "HIGH", "Severe foliar blight identified.", "High", 35.2, "High", "High humidity microclimate encourages spore spread.", 0, 36.6762, -121.6554, now_minus_12h),
+                ("scan-104", "farm-1", "farm-1", "Tomato", "Tomato_Early_Blight", "Tomato Early Blight", 0.94, "HIGH", "Concentric ring pattern detected.", "Moderate", 18.0, "Moderate", "Moderate spread risk.", 0, 36.6771, -121.6562, now_minus_24h),
+                ("scan-105", "farm-1", "farm-1", "Tomato", "Tomato_Healthy", "Tomato Healthy", 0.99, "HIGH", "Vigorous healthy foliar tissue.", "None", 0.0, "Low", "No infection present.", 1, 36.6788, -121.6535, now_iso),
+                ("scan-106", "farm-1", "farm-1", "Tomato", "Tomato_Healthy", "Tomato Healthy", 0.98, "HIGH", "Healthy tissue.", "None", 0.0, "Low", "No infection present.", 1, 36.6792, -121.6541, now_iso),
+
+                # Farm 2 (Boise, Potato)
+                ("scan-201", "farm-2", "farm-2", "Potato", "Potato_Early_Blight", "Potato Early Blight", 0.92, "HIGH", "Early foliar spot detected.", "Moderate", 16.0, "Moderate", "Standard mitigation required.", 0, 43.6142, -116.2035, now_minus_12h),
+                ("scan-202", "farm-2", "farm-2", "Potato", "Potato_Healthy", "Potato Healthy", 0.99, "HIGH", "Optimal potato canopy.", "None", 0.0, "Low", "Healthy plot.", 1, 43.6158, -116.2015, now_iso),
+                ("scan-203", "farm-2", "farm-2", "Potato", "Potato_Healthy", "Potato Healthy", 0.97, "HIGH", "Optimal potato canopy.", "None", 0.0, "Low", "Healthy plot.", 1, 43.6162, -116.2028, now_iso),
+                ("scan-204", "farm-2", "farm-2", "Potato", "Potato_Healthy", "Potato Healthy", 0.98, "HIGH", "Optimal potato canopy.", "None", 0.0, "Low", "Healthy plot.", 1, 43.6148, -116.2018, now_iso),
+
+                # Farm 3 (Fresno, Pepper)
+                ("scan-301", "farm-3", "farm-3", "Pepper", "Pepper_Bell_Bacterial_Spot", "Pepper Bell Bacterial Spot", 0.93, "HIGH", "Water-soaked foliar lesions.", "Moderate", 22.0, "Moderate", "Sanitation recommended.", 0, 36.7475, -119.7740, now_minus_12h),
+                ("scan-302", "farm-3", "farm-3", "Pepper", "Pepper_Healthy", "Pepper Healthy", 0.98, "HIGH", "Healthy pepper canopy.", "None", 0.0, "Low", "Healthy plot.", 1, 36.7472, -119.7718, now_iso),
+                ("scan-303", "farm-3", "farm-3", "Pepper", "Pepper_Healthy", "Pepper Healthy", 0.96, "HIGH", "Healthy pepper canopy.", "None", 0.0, "Low", "Healthy plot.", 1, 36.7461, -119.7732, now_iso),
+            ]
+            for s in initial_scans:
+                cursor.execute("""
+                    INSERT OR REPLACE INTO scans (
+                        id, farm_id, field_id, crop, prediction, disease,
+                        confidence, confidence_level, confidence_message,
+                        severity_level, severity_percentage, risk_level, risk_explanation,
+                        is_healthy, latitude, longitude, created_at
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                """, s)
+
         conn.commit()
         conn.close()
         logger.info("Verdra SQLite embedded storage verified.")

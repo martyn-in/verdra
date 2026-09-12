@@ -225,9 +225,21 @@ async def get_field_alerts_endpoint(
     configured radius (default 100m) record the same crop and disease within 72 hours.
     Explicit wording: 'Repeated detections may indicate localized disease pressure.'
     """
+    hours_val = getattr(time_window_hours, "default", time_window_hours)
+    if hasattr(hours_val, "default"): hours_val = hours_val.default
+    hours_int = int(hours_val) if hours_val is not None else 72
+
+    radius_val = getattr(spatial_radius_meters, "default", spatial_radius_meters)
+    if hasattr(radius_val, "default"): radius_val = radius_val.default
+    radius_float = float(radius_val) if radius_val is not None else 100.0
+
+    min_val = getattr(min_matching_scans, "default", min_matching_scans)
+    if hasattr(min_val, "default"): min_val = min_val.default
+    min_int = int(min_val) if min_val is not None else 3
+
     recent_scans = storage_service.get_recent_scans_for_alert_evaluation(
         field_id=field_id,
-        hours=time_window_hours
+        hours=hours_int
     )
 
     # Filter out healthy scans (alerts track pathogen pressures)
@@ -244,7 +256,7 @@ async def get_field_alerts_endpoint(
         crop_name, disease_name = key.split("::", 1)
 
         # 1. Field-based cluster check
-        if len(group_scans) >= min_matching_scans:
+        if len(group_scans) >= min_int:
             plants_affected = set(s.get("plant_id") for s in group_scans if s.get("plant_id"))
             alert_id = f"alert-{hashlib.md5(f'{field_id}-{key}-{len(group_scans)}'.encode()).hexdigest()[:8]}"
 
@@ -254,7 +266,7 @@ async def get_field_alerts_endpoint(
                 "crop": crop_name,
                 "field_id": field_id,
                 "matching_scans_count": len(group_scans),
-                "time_window": f"{time_window_hours} hours",
+                "time_window": f"{hours_int} hours",
                 "affected_plant_count": len(plants_affected) if plants_affected else len(group_scans),
                 "cluster_type": "Field Boundary Clustering",
                 "message": f"Repeated {disease_name} detections were recorded in {field_id if field_id != 'all' else 'your field area'}.",
@@ -266,8 +278,8 @@ async def get_field_alerts_endpoint(
 
         # 2. Coordinate / Haversine-based proximity cluster check (if field check didn't trigger)
         coord_scans = [s for s in group_scans if s.get("latitude") is not None and s.get("longitude") is not None]
-        if len(coord_scans) >= min_matching_scans:
-            # Check if at least min_matching_scans cluster within spatial_radius_meters
+        if len(coord_scans) >= min_int:
+            # Check if at least min_int cluster within radius_float
             clustered = []
             for i in range(len(coord_scans)):
                 cluster = [coord_scans[i]]
@@ -277,9 +289,9 @@ async def get_field_alerts_endpoint(
                             coord_scans[i]["latitude"], coord_scans[i]["longitude"],
                             coord_scans[j]["latitude"], coord_scans[j]["longitude"]
                         )
-                        if dist <= spatial_radius_meters:
+                        if dist <= radius_float:
                             cluster.append(coord_scans[j])
-                if len(cluster) >= min_matching_scans:
+                if len(cluster) >= min_int:
                     clustered = cluster
                     break
 
@@ -292,8 +304,8 @@ async def get_field_alerts_endpoint(
                     "crop": crop_name,
                     "field_id": field_id,
                     "matching_scans_count": len(clustered),
-                    "time_window": f"{time_window_hours} hours",
-                    "spatial_radius": f"{spatial_radius_meters:.0f} meters",
+                    "time_window": f"{hours_int} hours",
+                    "spatial_radius": f"{radius_float:.0f} meters",
                     "affected_plant_count": len(plants_affected) if plants_affected else len(clustered),
                     "cluster_type": "Geospatial Proximity Cluster",
                     "message": f"Repeated {disease_name} detections were recorded within {spatial_radius_meters:.0f}m radius.",

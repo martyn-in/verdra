@@ -2896,3 +2896,124 @@ h3,
   }
 }
 
+/* Verdra Language Selector */
+.verdra-lang-container {
+  position: relative;
+  width: 100%;
+}
+
+.verdra-lang-btn {
+  width: 100%;
+  min-height: 40px;
+  padding: 8px 12px;
+  background: var(--soft-2, #f1f6ef);
+  border: 1px solid var(--border, #dce6dc);
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  color: var(--forest, #12372a);
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  outline: none;
+  box-shadow: 0 1px 3px rgba(18, 55, 42, 0.04);
+  font-family: inherit;
+  box-sizing: border-box;
+}
+
+.verdra-lang-btn:hover {
+  background: #e8f0e5;
+  border-color: #a3c9a8;
+  transform: translateY(-1px);
+}
+
+.verdra-lang-btn:focus-visible {
+  border-color: var(--green, #2e7d32);
+  box-shadow: 0 0 0 2px rgba(46, 125, 50, 0.2);
+}
+
+.verdra-lang-dropdown {
+  position: absolute;
+  left: 0;
+  width: 100%;
+  min-width: 195px;
+  background: #ffffff;
+  border: 1px solid var(--border, #dce6dc);
+  border-radius: 14px;
+  padding: 6px;
+  box-shadow: 0 14px 34px rgba(18, 55, 42, 0.12), 0 4px 10px rgba(18, 55, 42, 0.06);
+  z-index: 1000;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  box-sizing: border-box;
+}
+
+.verdra-lang-dropdown.up {
+  bottom: calc(100% + 8px);
+}
+
+.verdra-lang-dropdown.down {
+  top: calc(100% + 8px);
+}
+
+.verdra-lang-header {
+  padding: 6px 10px 4px;
+  font-size: 9px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: var(--muted, #68756d);
+  border-bottom: 1px solid rgba(220, 230, 220, 0.6);
+  margin-bottom: 2px;
+}
+
+.verdra-lang-item {
+  width: 100%;
+  padding: 8px 10px;
+  border-radius: 10px;
+  border: 1px solid transparent;
+  background: transparent;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  text-align: left;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  font-family: inherit;
+  box-sizing: border-box;
+}
+
+.verdra-lang-item:hover {
+  background: #f4f8f3;
+  border-color: #dce6dc;
+}
+
+.verdra-lang-item.active {
+  background: #eef6ec;
+  border-color: #c8e0c6;
+}
+
+.verdra-lang-item-main {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--forest, #12372a);
+}
+
+.verdra-lang-item.active .verdra-lang-item-main {
+  color: var(--green, #2e7d32);
+}
+
+.verdra-lang-item-sub {
+  font-size: 10px;
+  color: var(--muted, #68756d);
+}
+
+.verdra-lang-item.active .verdra-lang-item-sub {
+  color: var(--green, #2e7d32);
+  font-weight: 600;
+}
+

@@ -646,13 +646,9 @@ function Shell({
           {item("model_info", "Model Info", Cpu)}
         </div>
 
-        <div className="sidebar-bottom" style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-          <div style={{ padding: "0 4px" }}>
-            <OfflineQueueBadge />
-            <div style={{ marginTop: 8 }}>
-              <LanguageSelector />
-            </div>
-          </div>
+        <div className="sidebar-bottom" style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+          <OfflineQueueBadge />
+          <LanguageSelector />
           <div className="profile-card">
             <span className="avatar">FM</span>
             <div>
@@ -677,7 +673,7 @@ function Shell({
           </div>
           <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
             <OfflineQueueBadge />
-            <LanguageSelector />
+            <LanguageSelector direction="down" />
           </div>
         </div>
 
