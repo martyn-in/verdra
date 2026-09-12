@@ -17,6 +17,42 @@ import {
 } from "lucide-react";
 import { useTranslation } from "@/context/LanguageContext";
 
+export type BioFilterMode = "natural" | "bio" | "contrast" | "shadow";
+
+export const FILTER_CONFIG: Record<
+  BioFilterMode,
+  { id: BioFilterMode; label: string; icon: string; css: string; desc: string }
+> = {
+  natural: {
+    id: "natural",
+    label: "Natural",
+    icon: "🌿",
+    css: "none",
+    desc: "Standard true-to-life neutral exposure",
+  },
+  bio: {
+    id: "bio",
+    label: "Bio Enhance",
+    icon: "🔬",
+    css: "contrast(1.22) saturate(1.30) brightness(1.02)",
+    desc: "Highlights chlorophyll, lesions & leaf vein clarity",
+  },
+  contrast: {
+    id: "contrast",
+    label: "High Contrast",
+    icon: "☀️",
+    css: "contrast(1.35) brightness(0.92)",
+    desc: "Suppresses glare under direct harsh field sunlight",
+  },
+  shadow: {
+    id: "shadow",
+    label: "Shadow Balance",
+    icon: "⛅",
+    css: "brightness(1.22) contrast(1.12)",
+    desc: "Lifts deep shadows under dense crop foliage",
+  },
+};
+
 interface LeafCaptureOverlayProps {
   isOpen: boolean;
   onClose: () => void;
@@ -31,6 +67,7 @@ export default function LeafCaptureOverlay({
   const { t } = useTranslation();
 
   const [stream, setStream] = useState<MediaStream | null>(null);
+  const [activeFilter, setActiveFilter] = useState<BioFilterMode>("natural");
   const [permissionStatus, setPermissionStatus] = useState<
     "prompt" | "granted" | "denied" | "unsupported" | "error"
   >("prompt");
@@ -145,6 +182,10 @@ export default function LeafCaptureOverlay({
     const snapCtx = snapCanvas.getContext("2d");
     if (!snapCtx) return;
 
+    if (activeFilter !== "natural" && FILTER_CONFIG[activeFilter]?.css !== "none") {
+      snapCtx.filter = FILTER_CONFIG[activeFilter].css;
+    }
+
     snapCtx.drawImage(video, 0, 0, snapCanvas.width, snapCanvas.height);
     const dataUrl = snapCanvas.toDataURL("image/jpeg", 0.95);
     setCapturedBlobUrl(dataUrl);
@@ -161,7 +202,7 @@ export default function LeafCaptureOverlay({
       "image/jpeg",
       0.95
     );
-  }, [stopCamera]);
+  }, [stopCamera, activeFilter]);
 
   // Handle image selected through native camera input
   const handleNativeCameraCapture = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -276,7 +317,13 @@ export default function LeafCaptureOverlay({
                 playsInline
                 autoPlay
                 muted
-                style={{ width: "100%", height: "100%", objectFit: "cover" }}
+                style={{
+                  width: "100%",
+                  height: "100%",
+                  objectFit: "cover",
+                  filter: FILTER_CONFIG[activeFilter]?.css || "none",
+                  transition: "filter 0.2s ease",
+                }}
               />
 
               {/* Leaf Reticle Guide */}
@@ -382,6 +429,56 @@ export default function LeafCaptureOverlay({
             </div>
           )}
         </div>
+
+        {/* Bio-Filter Selection Bar */}
+        {!capturedBlobUrl && permissionStatus === "granted" && (
+          <div
+            style={{
+              padding: "10px 16px",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              gap: 8,
+              background: "rgba(10, 25, 18, 0.95)",
+              borderTop: "1px solid rgba(255, 255, 255, 0.08)",
+              overflowX: "auto",
+            }}
+          >
+            {(Object.keys(FILTER_CONFIG) as BioFilterMode[]).map((mode) => {
+              const cfg = FILTER_CONFIG[mode];
+              const isSelected = activeFilter === mode;
+              return (
+                <button
+                  key={mode}
+                  type="button"
+                  onClick={() => setActiveFilter(mode)}
+                  title={cfg.desc}
+                  style={{
+                    background: isSelected ? "#2e7d32" : "rgba(255, 255, 255, 0.06)",
+                    border: isSelected
+                      ? "1px solid #52b788"
+                      : "1px solid rgba(255, 255, 255, 0.12)",
+                    color: isSelected ? "#ffffff" : "#c2d4c5",
+                    borderRadius: 20,
+                    padding: "6px 14px",
+                    fontSize: 12,
+                    fontWeight: isSelected ? 800 : 600,
+                    cursor: "pointer",
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: 6,
+                    whiteSpace: "nowrap",
+                    transition: "all 0.15s ease",
+                    boxShadow: isSelected ? "0 2px 8px rgba(46,125,50,0.4)" : "none",
+                  }}
+                >
+                  <span>{cfg.icon}</span>
+                  <span>{t(`landing.filters.${mode}`, cfg.label)}</span>
+                </button>
+              );
+            })}
+          </div>
+        )}
 
         {/* Footer Actions */}
         <div className="leaf-capture-footer">

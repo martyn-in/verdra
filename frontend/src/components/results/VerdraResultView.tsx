@@ -369,8 +369,13 @@ export default function VerdraResultView({ diagnosisData, scanId }: ResultViewPr
           {/* RIGHT: Diagnosis Card */}
           <div className="lg:col-span-6 space-y-6">
             <div className="verdra-glass p-7 sm:p-9 shadow-lg">
-              <div className="flex items-center justify-between mb-4">
-                <span className="text-xs font-bold uppercase tracking-wider text-[#66736B] font-mono">{displayCrop}</span>
+              <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
+                <div className="flex items-center gap-2">
+                  <span className="text-xs font-bold uppercase tracking-wider text-[#66736B] font-mono">{displayCrop}</span>
+                  <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-bold bg-[#EEF6EC] text-[#2E7D32] border border-[#DCE8DC]">
+                    🌿 Detected Image: Crop Leaf
+                  </span>
+                </div>
                 <span className={isHealthy ? "badge-success" : "badge-danger"}>{isHealthy ? "Healthy Plant" : "Disease Detected"}</span>
               </div>
               <h2 className="text-3xl sm:text-4xl font-extrabold text-[#12372A] tracking-tight mb-2 font-heading">{displayDisease}</h2>

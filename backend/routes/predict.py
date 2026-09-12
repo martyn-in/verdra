@@ -23,6 +23,7 @@ from services import (
     recommendation_service,
     opencv_service,
     storage_service,
+    image_understanding_service,
 )
 
 logger = logging.getLogger(__name__)
@@ -184,16 +185,39 @@ async def execute_real_inference_pipeline(
             "image_quality": quality,
         }
 
-    # 3. Leaf validation
+    # 3. General Image Understanding & Pre-Classification
+    understanding = image_understanding_service.classify_image(image_bytes)
+    if not understanding.get("is_crop_leaf", False):
+        detected_obj = understanding.get("detected_object", "other")
+        conf = float(understanding.get("confidence", 0.0))
+        rejection_msg = "This image is not a crop leaf. Please upload a clear crop leaf image."
+        logger.warning(f"Inference rejected: not_crop_leaf ({detected_obj}, conf={conf:.4f})")
+        return {
+            "status": "INVALID_INPUT",
+            "valid_leaf": False,
+            "reason": "not_leaf",
+            "error_code": "NOT_A_LEAF",
+            "detected_object": detected_obj,
+            "confidence": conf,
+            "message": rejection_msg,
+            "detail": rejection_msg,
+            "image_quality": quality,
+            "probabilities": understanding.get("probabilities", {})
+        }
+
+    # 4. Foliar leaf validation
     leaf_check = leaf_validator_service.predict(image_bytes)
     if not leaf_check.get("valid_leaf", False):
         leaf_prob = float(leaf_check.get("leaf_probability", 0.0))
         rejection_msg = leaf_check.get("message") or "No crop leaf detected. Please upload a leaf image."
         logger.warning(f"Inference rejected: not_leaf (leaf_probability={leaf_prob:.4f}) - {rejection_msg}")
         return {
+            "status": "INVALID_INPUT",
             "valid_leaf": False,
             "reason": "not_leaf",
             "error_code": "NOT_A_LEAF",
+            "detected_object": understanding.get("detected_object", "other"),
+            "confidence": float(round(1.0 - leaf_prob, 4)),
             "message": rejection_msg,
             "detail": rejection_msg,
             "leaf_probability": leaf_prob,
@@ -233,6 +257,7 @@ async def execute_real_inference_pipeline(
         }
 
     pred_res["valid_leaf"] = True
+    pred_res["detected_object"] = "crop leaf"
     pred_res["leaf_score"] = leaf_check.get("leaf_score", 1.0)
     pred_res["image_quality"] = quality
     pred_res["selected_crop"] = crop
@@ -268,6 +293,7 @@ async def execute_real_inference_pipeline(
             "id": scan_id,
             "scan_id": scan_id,
             "status": "UNCERTAIN",
+            "detected_object": "crop leaf",
             "confidence_level": "UNCERTAIN",
             "confidence_message": "Verdra could not confidently identify this leaf.",
             "confidence": conf,

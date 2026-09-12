@@ -294,13 +294,22 @@ export default function ScanPage() {
       // Brief pause on completed step before navigating
       await new Promise((resolve) => setTimeout(resolve, 600));
       router.push(`/result/${scanId}`);
-    } catch (err: unknown) {
+    } catch (err: any) {
       clearInterval(stepInterval);
-      const msg = err instanceof Error ? err.message : "Inference pipeline error";
-      if (msg.includes("503") || msg.toLowerCase().includes("ai model not configured")) {
-        setError("AI model not configured — Trained neural network weights (.keras) are required for inference.");
+      const payload = err?.payload;
+      const detectedObj = payload?.detected_object;
+      const status = payload?.status;
+
+      if (status === "INVALID_INPUT" || (detectedObj && detectedObj !== "crop leaf")) {
+        const formatted = detectedObj ? detectedObj.charAt(0).toUpperCase() + detectedObj.slice(1) : "Non-Leaf Object";
+        setError(`Detected Image: ${formatted}. This image is not a crop leaf. Please upload a clear crop leaf image.`);
       } else {
-        setError(msg || "Verdra could not analyze this image. Try uploading a clearer photograph of a single crop leaf.");
+        const msg = err instanceof Error ? err.message : "Inference pipeline error";
+        if (msg.includes("503") || msg.toLowerCase().includes("ai model not configured")) {
+          setError("AI model not configured — Trained neural network weights (.keras) are required for inference.");
+        } else {
+          setError(msg || "Verdra could not analyze this image. Try uploading a clearer photograph of a single crop leaf.");
+        }
       }
       setAnalyzing(false);
     }

@@ -27,6 +27,7 @@ export interface PredictResponse {
   top_predictions: PredictionResult[];
   image_quality: ImageQuality;
   selected_crop: string;
+  detected_object?: string;
   developer_debug?: DeveloperDebugInfo;
 }
 

@@ -326,6 +326,7 @@ function normalizeResult(raw: any, imageUrl: string): Prediction {
     status: raw?.status || (confidence < 55 ? "UNCERTAIN" : "CONFIDENT"),
     uncertaintyMessage: raw?.status === "UNCERTAIN" ? raw?.message : undefined,
 
+    detected_object: raw?.detected_object || "crop leaf",
     imageQuality: raw?.image_quality,
   };
 }
@@ -470,11 +471,10 @@ function Landing({
 
       <section id="how" className="section container">
         <div className="section-heading">
-          <span className="eyebrow">HOW VERDRA WORKS</span>
-          <h2>From a leaf photograph to an action plan.</h2>
+          <span className="eyebrow">{t("landing.how_kicker", "HOW VERDRA WORKS")}</span>
+          <h2>{t("landing.how_title", "From a leaf photograph to an action plan.")}</h2>
           <p>
-            A simple workflow designed for fast, technically defensible field
-            decision support.
+            {t("landing.how_subtitle", "A simple workflow designed for fast, technically defensible field decision support.")}
           </p>
         </div>
 
@@ -483,32 +483,32 @@ function Landing({
             {
               n: "01",
               icon: Camera,
-              title: "Capture",
-              body: "Upload, browse or photograph a clear crop leaf.",
+              title: t("landing.step_01_title", "Capture"),
+              body: t("landing.step_01_desc", "Upload, browse or photograph a clear crop leaf."),
             },
             {
               n: "02",
               icon: ScanLine,
-              title: "Detect",
-              body: "Run the trained MobileNetV2 neural network.",
+              title: t("landing.step_02_title", "Detect"),
+              body: t("landing.step_02_desc", "Run the trained MobileNetV2 neural network."),
             },
             {
               n: "03",
               icon: Eye,
-              title: "Explain",
-              body: "Inspect real Grad-CAM attention regions.",
+              title: t("landing.step_03_title", "Explain"),
+              body: t("landing.step_03_desc", "Inspect real Grad-CAM attention regions."),
             },
             {
               n: "04",
               icon: CloudRain,
-              title: "Evaluate Risk",
-              body: "Combine diagnosis with live environmental conditions.",
+              title: t("landing.step_04_title", "Evaluate Risk"),
+              body: t("landing.step_04_desc", "Combine diagnosis with live environmental conditions."),
             },
             {
               n: "05",
               icon: CheckCircle2,
-              title: "Take Action",
-              body: "Receive practical immediate, prevention & monitoring guidance.",
+              title: t("landing.step_05_title", "Take Action"),
+              body: t("landing.step_05_desc", "Receive practical immediate, prevention & monitoring guidance."),
             },
           ].map((step) => (
             <article className="step" key={step.n}>
@@ -526,26 +526,25 @@ function Landing({
 
       <section id="crops" className="section container" style={{ paddingTop: 0 }}>
         <div className="section-heading compact">
-          <span className="eyebrow">MODEL COVERAGE</span>
-          <h2>Supported Crops & Plant Pathologies</h2>
+          <span className="eyebrow">{t("landing.crops_kicker", "MODEL COVERAGE")}</span>
+          <h2>{t("landing.crops_title", "Supported Crops & Plant Pathologies")}</h2>
           <p>
-            Trained strictly on verified benchmark classes with high technical
-            precision.
+            {t("landing.crops_subtitle", "Trained strictly on verified benchmark classes with high technical precision.")}
           </p>
         </div>
 
         <div className="supported-crops-row">
           <div className="supported-crop-badge" style={{ color: "#12372a", background: "white", borderColor: "#dce6dc" }}>
             <Sprout size={16} color="#2e7d32" />
-            <strong>Tomato:</strong> Early Blight, Late Blight, Bacterial Spot, Healthy
+            <strong>{t("landing.crop_tomato", "Tomato")}:</strong> {t("landing.crop_tomato_diseases", "Early Blight, Late Blight, Bacterial Spot, Healthy")}
           </div>
           <div className="supported-crop-badge" style={{ color: "#12372a", background: "white", borderColor: "#dce6dc" }}>
             <Leaf size={16} color="#2e7d32" />
-            <strong>Potato:</strong> Early Blight, Late Blight, Healthy
+            <strong>{t("landing.crop_potato", "Potato")}:</strong> {t("landing.crop_potato_diseases", "Early Blight, Late Blight, Healthy")}
           </div>
           <div className="supported-crop-badge" style={{ color: "#12372a", background: "white", borderColor: "#dce6dc" }}>
             <Sparkles size={16} color="#2e7d32" />
-            <strong>Pepper:</strong> Bacterial Spot
+            <strong>{t("landing.crop_pepper", "Pepper")}:</strong> {t("landing.crop_pepper_diseases", "Bacterial Spot")}
           </div>
         </div>
       </section>
@@ -553,41 +552,41 @@ function Landing({
       <section id="features" className="feature-section">
         <div className="container">
           <div className="section-heading compact">
-            <span className="eyebrow light">MORE THAN CLASSIFICATION</span>
-            <h2>A complete crop-health decision workflow.</h2>
+            <span className="eyebrow light">{t("landing.features_kicker", "MORE THAN CLASSIFICATION")}</span>
+            <h2>{t("landing.features_title", "A complete crop-health decision workflow.")}</h2>
           </div>
 
           <div className="feature-grid">
             {[
               [
                 ScanLine,
-                "Real Disease Detection",
-                "Prediction comes from your connected trained model — never random values.",
+                t("landing.feature_1_title", "Real Disease Detection"),
+                t("landing.feature_1_desc", "Prediction comes from your connected trained model — never random values."),
               ],
               [
                 Eye,
-                "Visual Explainability",
-                "Grad-CAM indicates the regions that most influenced the prediction.",
+                t("landing.feature_2_title", "Visual Explainability"),
+                t("landing.feature_2_desc", "Grad-CAM indicates the regions that most influenced the prediction."),
               ],
               [
                 Activity,
-                "Estimated Visual Severity",
-                "Provides an estimated visual infection percentage and severity category.",
+                t("landing.feature_3_title", "Estimated Visual Severity"),
+                t("landing.feature_3_desc", "Provides an estimated visual infection percentage and severity category."),
               ],
               [
                 CloudRain,
-                "Live Environmental Data",
-                "Integrates real temperature, humidity, rainfall and wind telemetry.",
+                t("landing.feature_4_title", "Live Environmental Data"),
+                t("landing.feature_4_desc", "Integrates real temperature, humidity, rainfall and wind telemetry."),
               ],
               [
                 AlertTriangle,
-                "Spread Risk Engine",
-                "Connects disease context with environmental conditions.",
+                t("landing.feature_5_title", "Spread Risk Engine"),
+                t("landing.feature_5_desc", "Connects disease context with environmental conditions."),
               ],
               [
                 FileText,
-                "Actionable Guidance",
-                "Converts analysis into immediate action, prevention and monitoring.",
+                t("landing.feature_6_title", "Actionable Guidance"),
+                t("landing.feature_6_desc", "Converts analysis into immediate action, prevention and monitoring."),
               ],
             ].map(([Icon, title, body]: any) => (
               <article className="feature-card" key={title}>
@@ -1116,7 +1115,14 @@ function ScanPage({
       onResult(result);
     } catch (e: any) {
       const msg = e?.message || "";
-      if (msg === "Backend connection blocked.") {
+      const payload = e?.payload;
+      const detectedObj = payload?.detected_object;
+      const status = payload?.status;
+
+      if (status === "INVALID_INPUT" || (detectedObj && detectedObj !== "crop leaf")) {
+        const formatted = detectedObj ? detectedObj.charAt(0).toUpperCase() + detectedObj.slice(1) : "Non-Leaf Object";
+        setError(`Detected Image: ${formatted}. This image is not a crop leaf. Please upload a clear crop leaf image.`);
+      } else if (msg === "Backend connection blocked.") {
         setError("Backend connection blocked.");
       } else if (msg === "Prediction endpoint not found.") {
         setError("Prediction endpoint not found.");
@@ -1659,7 +1665,25 @@ function ResultPage({
         </section>
 
         <section className="diagnosis-card">
-          <span className="diagnosis-crop">{result.crop.toUpperCase()}</span>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "8px", flexWrap: "wrap", gap: "8px" }}>
+            <span className="diagnosis-crop">{result.crop.toUpperCase()}</span>
+            <span
+              style={{
+                fontSize: "11px",
+                fontWeight: 800,
+                color: "#2e7d32",
+                background: "rgba(46, 125, 50, 0.12)",
+                border: "1px solid rgba(46, 125, 50, 0.25)",
+                padding: "3px 10px",
+                borderRadius: "100px",
+                display: "inline-flex",
+                alignItems: "center",
+                gap: "5px",
+              }}
+            >
+              🌿 {t("landing.detected_image", "Detected Image")}: Crop Leaf
+            </span>
+          </div>
 
           <div className="diagnosis-status">
             <span>
