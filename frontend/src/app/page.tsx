@@ -52,6 +52,7 @@ import {
   analyzeCrop,
   checkQuality,
   fetchWeather,
+  optimizeImageForInference,
 } from "@/lib/api";
 import LeafCaptureOverlay from "@/components/scan/LeafCaptureOverlay";
 import BatchScanSection from "@/components/scan/BatchScanSection";
@@ -1040,7 +1041,8 @@ function ScanPage({
   async function evaluateImageQuality(f: File) {
     setCheckingQuality(true);
     try {
-      const q: QualityCheck = await checkQuality(f);
+      const optimized = await optimizeImageForInference(f);
+      const q: QualityCheck = await checkQuality(optimized);
       setQuality(q);
       if (q.leaf_validation && !q.leaf_validation.valid_leaf) {
         setError(
@@ -1055,12 +1057,21 @@ function ScanPage({
         setError("");
       }
     } catch (err: any) {
-      if (err?.message?.includes("NEXT_PUBLIC_API_URL is not configured")) {
-        setError("Verdra configuration error: NEXT_PUBLIC_API_URL is not configured.");
-      } else if (err?.message?.includes("could not connect")) {
-        setError("Verdra could not connect to the crop analysis service.");
+      const msg = err?.message || "";
+      if (msg === "Backend connection blocked.") {
+        setError("Backend connection blocked.");
+      } else if (msg === "Prediction endpoint not found.") {
+        setError("Prediction endpoint not found.");
+      } else if (msg === "AI model service error.") {
+        setError("AI model service error.");
+      } else if (msg === "Crop analysis service unavailable.") {
+        setError("Crop analysis service unavailable.");
       } else if (err?.payload?.leaf_validation?.message) {
         setError(err.payload.leaf_validation.message);
+      } else if (msg.includes("NEXT_PUBLIC_API_URL is not configured")) {
+        setError("Verdra configuration error: NEXT_PUBLIC_API_URL is not configured.");
+      } else if (msg) {
+        setError(msg);
       } else {
         setQuality({ quality: "Good", score: 85, pass: true, issues: [] });
       }
@@ -1143,23 +1154,31 @@ function ScanPage({
     }, 900);
 
     try {
-      const raw = await analyzeCrop(file, crop);
+      const optimized = await optimizeImageForInference(file);
+      const raw = await analyzeCrop(optimized, crop);
       const result = normalizeResult(raw, preview);
       onResult(result);
     } catch (e: any) {
       const msg = e?.message || "";
-      if (msg.includes("NEXT_PUBLIC_API_URL is not configured")) {
-        setError("Verdra configuration error: NEXT_PUBLIC_API_URL is not configured.");
+      if (msg === "Backend connection blocked.") {
+        setError("Backend connection blocked.");
+      } else if (msg === "Prediction endpoint not found.") {
+        setError("Prediction endpoint not found.");
+      } else if (msg === "AI model service error.") {
+        setError("AI model service error.");
+      } else if (msg === "Crop analysis service unavailable.") {
+        setError("Crop analysis service unavailable.");
       } else if (
+        msg.includes("temporarily unavailable") ||
         msg.includes("could not connect") ||
         msg.includes("Failed to fetch") ||
         msg.includes("NetworkError")
       ) {
-        setError("Verdra could not connect to the crop analysis service.");
-      } else if (msg.includes("temporarily unavailable")) {
-        setError("Verdra's AI model is temporarily unavailable.");
+        setError("Crop analysis service unavailable.");
+      } else if (e?.payload?.leaf_validation?.message) {
+        setError(e.payload.leaf_validation.message);
       } else {
-        setError(msg || "Verdra could not analyze this image.");
+        setError(msg || "Crop analysis service unavailable.");
       }
     } finally {
       window.clearInterval(timer);
