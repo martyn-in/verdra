@@ -24,19 +24,32 @@ export default function LanguageSelector({
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    function handleClickOutside(e: MouseEvent) {
+    function handleClickOutside(e: MouseEvent | TouchEvent) {
       if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
         setOpen(false);
       }
     }
     document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
+    document.addEventListener("touchstart", handleClickOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+      document.removeEventListener("touchstart", handleClickOutside);
+    };
   }, []);
 
   const activeLang = LANGUAGES.find((l) => l.code === language) || LANGUAGES[0];
 
+  const handleSelectLanguage = (code: Language) => {
+    setLanguage(code);
+    setOpen(false);
+  };
+
   return (
-    <div className={`verdra-lang-container ${className}`} ref={dropdownRef}>
+    <div
+      className={`verdra-lang-container ${className}`}
+      ref={dropdownRef}
+      style={{ position: "relative", zIndex: 1000 }}
+    >
       <button
         type="button"
         onClick={() => setOpen(!open)}
@@ -89,19 +102,21 @@ export default function LanguageSelector({
           style={{
             position: "absolute",
             [direction === "up" ? "bottom" : "top"]: "calc(100% + 8px)",
-            left: 0,
-            width: "100%",
+            right: 0,
+            left: "auto",
+            width: "max-content",
             minWidth: "195px",
             background: "#ffffff",
             border: "1px solid #dce6dc",
             borderRadius: "14px",
             padding: "6px",
-            boxShadow: "0 14px 34px rgba(18, 55, 42, 0.12), 0 4px 10px rgba(18, 55, 42, 0.06)",
-            zIndex: 1000,
+            boxShadow: "0 14px 34px rgba(18, 55, 42, 0.20), 0 4px 12px rgba(18, 55, 42, 0.10)",
+            zIndex: 999999,
             display: "flex",
             flexDirection: "column",
             gap: "4px",
             boxSizing: "border-box",
+            pointerEvents: "auto",
           }}
         >
           <div
@@ -125,9 +140,17 @@ export default function LanguageSelector({
               <button
                 key={lang.code}
                 type="button"
-                onClick={() => {
-                  setLanguage(lang.code);
-                  setOpen(false);
+                onMouseDown={(e) => {
+                  e.stopPropagation();
+                  handleSelectLanguage(lang.code);
+                }}
+                onTouchEnd={(e) => {
+                  e.stopPropagation();
+                  handleSelectLanguage(lang.code);
+                }}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleSelectLanguage(lang.code);
                 }}
                 className={`verdra-lang-item ${isSelected ? "active" : ""}`}
                 style={{
@@ -142,9 +165,10 @@ export default function LanguageSelector({
                   textAlign: "left",
                   cursor: "pointer",
                   boxSizing: "border-box",
+                  pointerEvents: "auto",
                 }}
               >
-                <div style={{ display: "flex", flexDirection: "column" }}>
+                <div style={{ display: "flex", flexDirection: "column", pointerEvents: "none" }}>
                   <span
                     className="verdra-lang-item-main"
                     style={{
@@ -165,7 +189,13 @@ export default function LanguageSelector({
                     {lang.label}
                   </span>
                 </div>
-                {isSelected && <Check size={16} color="#2e7d32" style={{ flexShrink: 0 }} />}
+                {isSelected && (
+                  <Check
+                    size={16}
+                    color="#2e7d32"
+                    style={{ flexShrink: 0, pointerEvents: "none" }}
+                  />
+                )}
               </button>
             );
           })}

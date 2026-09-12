@@ -398,7 +398,7 @@ function Landing({
           <source src="/videos/verdra-field-hero.mp4" type="video/mp4" />
         </video>
 
-        <header className="landing-nav container" style={{ position: "relative", zIndex: 3 }}>
+        <header className="landing-nav container" style={{ position: "relative", zIndex: 1000 }}>
           <Logo />
 
           <nav className="landing-links">
