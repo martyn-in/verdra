@@ -413,17 +413,17 @@ function Landing({
             </button>
           </nav>
 
-          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-            <div style={{ width: 145 }}>
+          <div className="landing-nav-actions" style={{ display: "flex", alignItems: "center", gap: 10 }}>
+            <div className="landing-lang-wrap" style={{ width: 145 }}>
               <LanguageSelector direction="down" />
             </div>
 
             <button
-              className="button primary"
+              className="button primary landing-scan-btn"
               onClick={() => navigate("scan")}
             >
               <ScanLine size={18} />
-              {t("landing.scan_your_crop", "Scan Your Crop")}
+              <span className="landing-scan-text">{t("landing.scan_your_crop", "Scan Your Crop")}</span>
             </button>
           </div>
         </header>
