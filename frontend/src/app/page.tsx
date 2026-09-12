@@ -50,7 +50,6 @@ import {
   checkQuality,
   fetchWeather,
 } from "@/lib/api";
-import OpenCvCameraScanner, { OpenCvScanResult } from "@/components/scan/OpenCvCameraScanner";
 import LeafCaptureOverlay from "@/components/scan/LeafCaptureOverlay";
 import BatchScanSection from "@/components/scan/BatchScanSection";
 import VoiceReadout from "@/components/results/VoiceReadout";
@@ -1004,7 +1003,6 @@ function ScanPage({
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const cameraInputRef = useRef<HTMLInputElement>(null);
-  const [scannerOpen, setScannerOpen] = useState(false);
   const [scanMode, setScanMode] = useState<"single" | "batch">("single");
   const [captureOverlayOpen, setCaptureOverlayOpen] = useState(false);
 
@@ -1240,7 +1238,11 @@ function ScanPage({
                           className="button primary"
                           onClick={(e) => {
                             e.preventDefault();
-                            setCaptureOverlayOpen(true);
+                            if (typeof window !== "undefined" && !navigator?.mediaDevices?.getUserMedia) {
+                              cameraInputRef.current?.click();
+                            } else {
+                              setCaptureOverlayOpen(true);
+                            }
                           }}
                         >
                           <Camera size={16} />
@@ -1257,18 +1259,6 @@ function ScanPage({
                         >
                           <UploadCloud size={16} />
                           Browse Files
-                        </button>
-
-                        <button
-                          type="button"
-                          className="button secondary"
-                          onClick={(e) => {
-                            e.preventDefault();
-                            setScannerOpen(true);
-                          }}
-                        >
-                          <Sparkles size={16} />
-                          OpenCV Scanner
                         </button>
                       </div>
                     </div>
@@ -1470,17 +1460,6 @@ function ScanPage({
         </aside>
       </div>
       )}
-
-      <OpenCvCameraScanner
-        isOpen={scannerOpen}
-        onClose={() => setScannerOpen(false)}
-        onCapture={(res) => {
-          handleFile(res.file);
-          if (res.enhancedUrl || res.previewUrl) {
-            setPreview(res.enhancedUrl || res.previewUrl);
-          }
-        }}
-      />
 
       <LeafCaptureOverlay
         isOpen={captureOverlayOpen}

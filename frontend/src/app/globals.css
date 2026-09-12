@@ -3017,3 +3017,307 @@ h3,
   font-weight: 600;
 }
 
+/* ===================================================
+   VERDRA BATCH SCAN STYLING
+   =================================================== */
+.batch-scan-container {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  width: 100%;
+}
+
+.batch-config-card {
+  background: #ffffff;
+  border: 1px solid var(--border, #dce6dc);
+  border-radius: 20px;
+  padding: 22px 26px;
+  box-shadow: 0 4px 16px rgba(18, 55, 42, 0.05);
+}
+
+.batch-config-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid var(--border, #dce6dc);
+  margin-bottom: 18px;
+}
+
+.batch-config-header .icon-wrap {
+  width: 38px;
+  height: 38px;
+  border-radius: 12px;
+  background: #edf5ea;
+  border: 1px solid #cce2ca;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--green, #2e7d32);
+}
+
+.batch-config-header h3 {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 800;
+  color: var(--forest, #12372a);
+}
+
+.batch-config-header p {
+  margin: 2px 0 0;
+  font-size: 12px;
+  color: var(--muted, #68756d);
+}
+
+.batch-input-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 16px;
+  margin-bottom: 16px;
+}
+
+.batch-field-group {
+  display: flex;
+  flex-direction: column;
+}
+
+.batch-field-label {
+  font-size: 11px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--forest, #12372a);
+  margin-bottom: 6px;
+}
+
+.batch-input,
+.batch-select {
+  width: 100%;
+  min-height: 42px;
+  padding: 10px 14px;
+  background: var(--soft-2, #f1f6ef);
+  border: 1px solid var(--border, #dce6dc);
+  border-radius: 12px;
+  font-size: 13px;
+  color: var(--forest, #12372a);
+  font-family: inherit;
+  box-sizing: border-box;
+  outline: none;
+  transition: all 0.2s ease;
+}
+
+.batch-input:focus,
+.batch-select:focus {
+  background: #ffffff;
+  border-color: var(--green, #2e7d32);
+  box-shadow: 0 0 0 3px rgba(46, 125, 50, 0.12);
+}
+
+.batch-dropzone {
+  border: 2px dashed #b8d4b5;
+  background: #f7faf6;
+  border-radius: 20px;
+  padding: 36px 20px;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.batch-dropzone:hover {
+  border-color: var(--green, #2e7d32);
+  background: #edf5ea;
+  transform: translateY(-2px);
+}
+
+.batch-dropzone-icon {
+  width: 50px;
+  height: 50px;
+  border-radius: 16px;
+  background: #e1efe0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--green, #2e7d32);
+  margin: 0 auto 12px;
+}
+
+.batch-dropzone h4 {
+  margin: 0 0 4px;
+  font-size: 15px;
+  font-weight: 800;
+  color: var(--forest, #12372a);
+}
+
+.batch-dropzone p {
+  margin: 0;
+  font-size: 12px;
+  color: var(--muted, #68756d);
+}
+
+.batch-preview-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
+  gap: 12px;
+  margin-top: 16px;
+}
+
+.batch-preview-item {
+  position: relative;
+  aspect-ratio: 1;
+  border-radius: 14px;
+  overflow: hidden;
+  border: 1px solid var(--border, #dce6dc);
+  background: #000;
+  box-shadow: 0 2px 8px rgba(18, 55, 42, 0.08);
+}
+
+.batch-preview-item img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.batch-preview-badge {
+  position: absolute;
+  top: 6px;
+  left: 6px;
+  padding: 2px 7px;
+  border-radius: 6px;
+  background: rgba(18, 55, 42, 0.85);
+  color: #ffffff;
+  font-size: 10px;
+  font-weight: 800;
+  font-family: monospace;
+}
+
+.batch-preview-delete {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: rgba(220, 38, 38, 0.9);
+  color: white;
+  border: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: transform 0.15s ease;
+}
+
+.batch-preview-delete:hover {
+  transform: scale(1.15);
+  background: #dc2626;
+}
+
+.batch-analyze-btn {
+  width: 100%;
+  min-height: 48px;
+  border-radius: 14px;
+  background: var(--forest, #12372a);
+  color: #ffffff;
+  border: 0;
+  font-size: 14px;
+  font-weight: 800;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: 0 4px 14px rgba(18, 55, 42, 0.2);
+}
+
+.batch-analyze-btn:hover:not(:disabled) {
+  background: #174a38;
+  transform: translateY(-1px);
+}
+
+.batch-analyze-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* ===================================================
+   VERDRA CAMERA CAPTURE MODAL STYLING
+   =================================================== */
+.leaf-capture-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 99999;
+  background: rgba(10, 20, 15, 0.88);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  box-sizing: border-box;
+}
+
+.leaf-capture-card {
+  position: relative;
+  width: 100%;
+  max-width: 620px;
+  background: #0d1612;
+  border: 1px solid rgba(82, 183, 136, 0.35);
+  border-radius: 24px;
+  overflow: hidden;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.85);
+  display: flex;
+  flex-direction: column;
+  max-height: 92vh;
+  box-sizing: border-box;
+}
+
+.leaf-capture-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 20px;
+  background: #12231a;
+  border-bottom: 1px solid rgba(46, 125, 50, 0.25);
+}
+
+.leaf-capture-header h3 {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 800;
+  color: #ffffff;
+}
+
+.leaf-capture-header p {
+  margin: 2px 0 0;
+  font-size: 11px;
+  color: #8ea396;
+}
+
+.leaf-capture-viewfinder {
+  position: relative;
+  width: 100%;
+  height: 380px;
+  background: #000000;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.leaf-capture-viewfinder video {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.leaf-capture-footer {
+  padding: 16px 22px;
+  background: #12231a;
+  border-top: 1px solid rgba(46, 125, 50, 0.25);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+

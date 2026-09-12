@@ -22,8 +22,6 @@ import {
 } from "lucide-react";
 import VerdraSidebar from "@/components/layout/VerdraSidebar";
 import { api } from "@/lib/api";
-import { compressImage } from "@/lib/utils";
-import OpenCvCameraScanner, { OpenCvScanResult } from "@/components/scan/OpenCvCameraScanner";
 import LeafCaptureOverlay from "@/components/scan/LeafCaptureOverlay";
 import BatchScanSection from "@/components/scan/BatchScanSection";
 
@@ -464,18 +462,6 @@ export default function ScanPage() {
                       >
                         <Camera className="w-4 h-4 text-[#85E3B3]" />
                         <span>Capture Camera</span>
-                        <span className="text-[10px] bg-white/20 px-1.5 py-0.5 rounded font-mono font-bold">
-                          GUIDE
-                        </span>
-                      </button>
-
-                      <button
-                        type="button"
-                        onClick={() => setScannerOpen(true)}
-                        className="btn-outline !px-5 !py-3 !text-sm flex items-center gap-2"
-                      >
-                        <Sparkles className="w-4 h-4 text-[#2E7D32]" />
-                        <span>OpenCV Scanner</span>
                       </button>
 
                       <button
@@ -629,12 +615,7 @@ export default function ScanPage() {
         </>
       )}
 
-        {/* OpenCV Live Camera Scanner Modal */}
-        <OpenCvCameraScanner
-          isOpen={scannerOpen}
-          onClose={() => setScannerOpen(false)}
-          onCapture={handleScanCapture}
-        />
+
 
         {/* Leaf Framing & Image Quality Live Overlay */}
         <LeafCaptureOverlay

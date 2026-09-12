@@ -13,6 +13,7 @@ import {
   CheckCircle2,
   ArrowRight,
   RotateCcw,
+  Smartphone,
 } from "lucide-react";
 import { useTranslation } from "@/context/LanguageContext";
 
@@ -29,7 +30,6 @@ export default function LeafCaptureOverlay({
 }: LeafCaptureOverlayProps) {
   const { t } = useTranslation();
 
-  // Hardware states
   const [stream, setStream] = useState<MediaStream | null>(null);
   const [permissionStatus, setPermissionStatus] = useState<
     "prompt" | "granted" | "denied" | "unsupported" | "error"
@@ -38,19 +38,18 @@ export default function LeafCaptureOverlay({
   const [facingMode, setFacingMode] = useState<"environment" | "user">("environment");
   const [hasMultipleCameras, setHasMultipleCameras] = useState(false);
 
-  // Real live image quality indicators (NO AI disease prediction during preview)
+  // Live quality indicators
   const [lighting, setLighting] = useState<"Good" | "Too Dark" | "Too Bright">("Good");
-  const [focus, setFocus] = useState<"Good" | "Blurry">("Blurry");
-  const [framing, setFraming] = useState<"Ready" | "Move Leaf Into Frame">("Move Leaf Into Frame");
+  const [focus, setFocus] = useState<"Good" | "Blurry">("Good");
+  const [framing, setFraming] = useState<"Ready" | "Align Leaf">("Ready");
 
   // Post-capture review states
   const [capturedBlobUrl, setCapturedBlobUrl] = useState<string | null>(null);
   const [capturedFile, setCapturedFile] = useState<File | null>(null);
-  const [isShutterFlashed, setIsShutterFlashed] = useState(false);
 
   // DOM Refs
   const videoRef = useRef<HTMLVideoElement | null>(null);
-  const canvasRef = useRef<HTMLCanvasElement | null>(null);
+  const nativeCameraInputRef = useRef<HTMLInputElement | null>(null);
   const animFrameRef = useRef<number | null>(null);
 
   // Check camera hardware
@@ -113,18 +112,17 @@ export default function LeafCaptureOverlay({
     } catch (err: any) {
       if (err.name === "NotAllowedError" || err.name === "PermissionDeniedError") {
         setPermissionStatus("denied");
-        setErrorMessage("Camera permission was not granted. Upload an image instead.");
+        setErrorMessage("Camera permission was not granted. You can use the device camera app below.");
       } else if (err.name === "NotFoundError" || err.name === "DevicesNotFoundError") {
         setPermissionStatus("error");
-        setErrorMessage("No camera device detected on this system.");
+        setErrorMessage("No direct camera device detected on this system.");
       } else {
         setPermissionStatus("error");
-        setErrorMessage(err.message || "Camera capture is unavailable on this browser. Please upload a photo instead.");
+        setErrorMessage("Direct video stream could not be started.");
       }
     }
   }, [facingMode, stopCamera]);
 
-  // Lifecycle when modal opens/closes
   useEffect(() => {
     if (isOpen && !capturedBlobUrl) {
       startCamera();
@@ -136,157 +134,10 @@ export default function LeafCaptureOverlay({
     return () => stopCamera();
   }, [isOpen, startCamera, stopCamera, capturedBlobUrl]);
 
-  // Switch camera front / rear
-  const toggleCameraFacing = useCallback(() => {
-    setFacingMode((prev) => (prev === "environment" ? "user" : "environment"));
-  }, []);
-
-  // -----------------------------------------------------------------
-  // REAL-TIME IMAGE QUALITY EVALUATION LOOP (Canvas Frame Analysis)
-  // Calculates: Luminance (Lighting), Discrete Laplacian (Blur/Focus),
-  // and Central Reticle Pixel Distribution (Framing).
-  // -----------------------------------------------------------------
-  useEffect(() => {
-    if (permissionStatus !== "granted" || !videoRef.current || capturedBlobUrl) {
-      return;
-    }
-
-    const video = videoRef.current;
-    let isAnalyzing = false;
-
-    // Off-screen evaluation canvas
-    const evalCanvas = document.createElement("canvas");
-    const evalCtx = evalCanvas.getContext("2d", { willReadFrequently: true });
-    if (!evalCtx) return;
-
-    const analyzeFrame = () => {
-      if (video.readyState >= 2 && !isAnalyzing) {
-        isAnalyzing = true;
-
-        const width = 240; // High performance evaluation scale
-        const height = Math.floor((video.videoHeight / (video.videoWidth || 1)) * width) || 180;
-        evalCanvas.width = width;
-        evalCanvas.height = height;
-
-        evalCtx.drawImage(video, 0, 0, width, height);
-
-        try {
-          const imgData = evalCtx.getImageData(0, 0, width, height);
-          const data = imgData.data;
-          const pixelCount = width * height;
-
-          // 1. Average Luminance
-          let sumLuma = 0;
-          const gray = new Uint8Array(pixelCount);
-
-          // Central 60% reticle region boundaries
-          const rx1 = Math.floor(width * 0.2);
-          const rx2 = Math.floor(width * 0.8);
-          const ry1 = Math.floor(height * 0.2);
-          const ry2 = Math.floor(height * 0.8);
-          let centerFoliarPixels = 0;
-          let centerTotalPixels = 0;
-
-          for (let i = 0; i < pixelCount; i++) {
-            const idx = i * 4;
-            const r = data[idx];
-            const g = data[idx + 1];
-            const b = data[idx + 2];
-            const luma = (r * 299 + g * 587 + b * 114) / 1000;
-            gray[i] = luma;
-            sumLuma += luma;
-
-            const px = i % width;
-            const py = Math.floor(i / width);
-
-            // Check if pixel is inside the center framing reticle
-            if (px >= rx1 && px <= rx2 && py >= ry1 && py <= ry2) {
-              centerTotalPixels++;
-              // Foliar excess green: 2G - R - B > 15
-              const exg = 2 * g - r - b;
-              if (exg > 15 && g > b && luma > 20 && luma < 240) {
-                centerFoliarPixels++;
-              }
-            }
-          }
-
-          const avgLuma = sumLuma / pixelCount;
-          if (avgLuma < 40) {
-            setLighting("Too Dark");
-          } else if (avgLuma > 220) {
-            setLighting("Too Bright");
-          } else {
-            setLighting("Good");
-          }
-
-          // 2. Framing check: At least 15% foliar coverage within center reticle
-          const centerFoliarRatio = centerTotalPixels > 0 ? centerFoliarPixels / centerTotalPixels : 0;
-          if (centerFoliarRatio >= 0.15) {
-            setFraming("Ready");
-          } else {
-            setFraming("Move Leaf Into Frame");
-          }
-
-          // 3. Focus check: Discrete Laplacian variance on central reticle
-          let lapSum = 0;
-          let lapSumSq = 0;
-          let lapCount = 0;
-
-          for (let y = ry1 + 2; y < ry2 - 2; y += 2) {
-            const rowOffset = y * width;
-            for (let x = rx1 + 2; x < rx2 - 2; x += 2) {
-              const center = gray[rowOffset + x];
-              const up = gray[rowOffset - width + x];
-              const down = gray[rowOffset + width + x];
-              const left = gray[rowOffset + x - 1];
-              const right = gray[rowOffset + x + 1];
-
-              const lap = up + down + left + right - 4 * center;
-              lapSum += lap;
-              lapSumSq += lap * lap;
-              lapCount++;
-            }
-          }
-
-          let lapVariance = 0;
-          if (lapCount > 0) {
-            const meanLap = lapSum / lapCount;
-            lapVariance = lapSumSq / lapCount - meanLap * meanLap;
-          }
-
-          // Variance threshold for real focus sharpness
-          if (lapVariance >= 35) {
-            setFocus("Good");
-          } else {
-            setFocus("Blurry");
-          }
-        } catch (e) {
-          // Continue gracefully
-        }
-
-        isAnalyzing = false;
-      }
-
-      animFrameRef.current = requestAnimationFrame(analyzeFrame);
-    };
-
-    animFrameRef.current = requestAnimationFrame(analyzeFrame);
-
-    return () => {
-      if (animFrameRef.current) {
-        cancelAnimationFrame(animFrameRef.current);
-      }
-    };
-  }, [permissionStatus, capturedBlobUrl]);
-
-  // Capture High-Res Frame Snapshot
-  const handleCaptureLeaf = useCallback(() => {
+  // Capture frame from video
+  const handleCaptureFromVideo = useCallback(() => {
     if (!videoRef.current) return;
     const video = videoRef.current;
-
-    // Flash animation
-    setIsShutterFlashed(true);
-    setTimeout(() => setIsShutterFlashed(false), 200);
 
     const snapCanvas = document.createElement("canvas");
     snapCanvas.width = video.videoWidth || 1280;
@@ -312,15 +163,24 @@ export default function LeafCaptureOverlay({
     );
   }, [stopCamera]);
 
-  // Retake Snapshot
+  // Handle image selected through native camera input
+  const handleNativeCameraCapture = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const previewUrl = URL.createObjectURL(file);
+    setCapturedFile(file);
+    setCapturedBlobUrl(previewUrl);
+    stopCamera();
+  };
+
   const handleRetake = () => {
     setCapturedBlobUrl(null);
     setCapturedFile(null);
     startCamera();
   };
 
-  // Confirm and Use Photo for Real AI Pipeline
-  const handleUsePhoto = () => {
+  const handleConfirmPhoto = () => {
     if (!capturedFile || !capturedBlobUrl) return;
     onCapture(capturedFile, capturedBlobUrl);
     onClose();
@@ -329,228 +189,289 @@ export default function LeafCaptureOverlay({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/85 backdrop-blur-md p-3 sm:p-6 animate-in fade-in duration-200">
-      <div className="relative w-full max-w-2xl bg-[#0d1612] border border-[#2E7D32]/40 rounded-3xl overflow-hidden shadow-2xl flex flex-col max-h-[92vh]">
-        
-        {/* Header Bar */}
-        <div className="flex items-center justify-between px-5 py-3.5 bg-[#12231A]/90 border-b border-[#2E7D32]/20 z-20">
-          <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-xl bg-[#2E7D32]/20 border border-[#2E7D32]/40 flex items-center justify-center text-[#52B788]">
-              <Camera className="w-4 h-4" />
+    <div
+      className="leaf-capture-backdrop"
+      onClick={(e) => {
+        if (e.target === e.currentTarget) onClose();
+      }}
+    >
+      {/* Hidden native camera trigger */}
+      <input
+        ref={nativeCameraInputRef}
+        type="file"
+        accept="image/*"
+        capture="environment"
+        style={{ display: "none" }}
+        onChange={handleNativeCameraCapture}
+      />
+
+      <div className="leaf-capture-card">
+        {/* Header */}
+        <div className="leaf-capture-header">
+          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+            <div
+              style={{
+                width: 34,
+                height: 34,
+                borderRadius: 10,
+                background: "rgba(46,125,50,0.25)",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                color: "#52b788",
+              }}
+            >
+              <Camera size={18} />
             </div>
             <div>
-              <h3 className="text-sm font-bold text-white tracking-wide font-heading">
-                {t("scan.capture_camera", "Capture Camera")}
-              </h3>
-              <p className="text-[11px] text-[#8EA396]">
-                {t("camera_overlay.instruction", "Place one leaf inside the frame")}
-              </p>
+              <h3>Crop Leaf Scanner</h3>
+              <p>Position single leaf within frame for clean AI diagnosis</p>
             </div>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
             {hasMultipleCameras && permissionStatus === "granted" && !capturedBlobUrl && (
               <button
                 type="button"
-                onClick={toggleCameraFacing}
-                className="p-2 rounded-xl bg-white/5 border border-white/10 text-white hover:bg-white/10 transition-all text-xs"
+                onClick={() => setFacingMode((prev) => (prev === "environment" ? "user" : "environment"))}
+                style={{
+                  background: "rgba(255,255,255,0.1)",
+                  border: "1px solid rgba(255,255,255,0.2)",
+                  color: "white",
+                  padding: "6px 10px",
+                  borderRadius: 10,
+                  cursor: "pointer",
+                }}
                 title="Switch Camera"
               >
-                <RefreshCw className="w-4 h-4" />
+                <RefreshCw size={14} />
               </button>
             )}
 
             <button
               type="button"
               onClick={onClose}
-              className="p-2 rounded-xl bg-white/5 border border-white/10 text-[#A3B8AC] hover:text-white hover:bg-white/10 transition-all"
+              style={{
+                background: "rgba(255,255,255,0.1)",
+                border: "1px solid rgba(255,255,255,0.2)",
+                color: "white",
+                padding: "6px 10px",
+                borderRadius: 10,
+                cursor: "pointer",
+              }}
+              title="Close"
             >
-              <X className="w-5 h-5" />
+              <X size={16} />
             </button>
           </div>
         </div>
 
-        {/* Viewfinder / Video Container */}
-        <div className="relative flex-1 bg-black overflow-hidden flex items-center justify-center min-h-[340px] sm:min-h-[440px]">
-          
-          {/* Shutter flash */}
-          {isShutterFlashed && (
-            <div className="absolute inset-0 bg-white z-40 animate-out fade-out duration-200 pointer-events-none" />
-          )}
-
-          {/* PERMISSION DENIED STATE */}
-          {permissionStatus === "denied" && (
-            <div className="text-center p-8 space-y-4 max-w-md mx-auto z-20">
-              <div className="w-14 h-14 rounded-2xl bg-red-500/20 border border-red-500/40 flex items-center justify-center text-red-400 mx-auto">
-                <CameraOff className="w-7 h-7" />
-              </div>
-              <h4 className="text-base font-bold text-white">Camera Access Denied</h4>
-              <p className="text-xs text-red-300 bg-red-950/40 border border-red-800/40 p-3 rounded-xl leading-relaxed">
-                {t("camera_overlay.permission_denied", "Camera permission was not granted. Upload an image instead.")}
-              </p>
-              <button
-                type="button"
-                onClick={onClose}
-                className="btn-outline !px-5 !py-2.5 !text-xs !text-white"
-              >
-                Close &amp; Upload Photo Instead
-              </button>
-            </div>
-          )}
-
-          {/* UNSUPPORTED OR HARDWARE ERROR */}
-          {(permissionStatus === "unsupported" || permissionStatus === "error") && (
-            <div className="text-center p-8 space-y-4 max-w-sm mx-auto z-20">
-              <div className="w-14 h-14 rounded-2xl bg-amber-500/20 border border-amber-500/40 flex items-center justify-center text-amber-400 mx-auto">
-                <AlertTriangle className="w-7 h-7" />
-              </div>
-              <h4 className="text-base font-bold text-white">Camera Unavailable</h4>
-              <p className="text-xs text-[#8EA396] leading-relaxed">
-                {errorMessage || t("camera_overlay.unsupported", "Camera capture is unavailable on this browser. Please upload a photo instead.")}
-              </p>
-              <button
-                type="button"
-                onClick={onClose}
-                className="btn-outline !px-5 !py-2.5 !text-xs !text-white"
-              >
-                Close &amp; Upload Photo
-              </button>
-            </div>
-          )}
-
-          {/* LIVE STREAM & RETICLE OVERLAY */}
+        {/* Viewfinder Body */}
+        <div className="leaf-capture-viewfinder">
+          {/* Active Live Video */}
           {permissionStatus === "granted" && !capturedBlobUrl && (
-            <>
+            <div style={{ position: "relative", width: "100%", height: "100%" }}>
               <video
                 ref={videoRef}
                 playsInline
                 autoPlay
                 muted
-                className="w-full h-full object-cover select-none"
+                style={{ width: "100%", height: "100%", objectFit: "cover" }}
               />
 
-              {/* Central Leaf-Safe Framing Reticle */}
-              <div className="absolute inset-0 pointer-events-none z-10 flex flex-col items-center justify-between p-6">
-                
-                {/* Real-time Quality Indicators Bar */}
-                <div className="flex items-center justify-center gap-2 flex-wrap">
-                  {/* Lighting Indicator */}
-                  <div
-                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl border backdrop-blur-md text-xs font-mono font-medium transition-colors ${
-                      lighting === "Good"
-                        ? "bg-[#2E7D32]/70 border-[#52B788] text-white"
-                        : "bg-amber-950/70 border-amber-500/50 text-amber-300"
-                    }`}
+              {/* Leaf Reticle Guide */}
+              <div
+                style={{
+                  position: "absolute",
+                  inset: 0,
+                  pointerEvents: "none",
+                  display: "flex",
+                  flexDirection: "column",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  padding: 20,
+                }}
+              >
+                {/* Central Leaf Frame */}
+                <div
+                  style={{
+                    width: 240,
+                    height: 240,
+                    borderRadius: 24,
+                    border: "2px dashed #52b788",
+                    boxShadow: "0 0 25px rgba(82,183,136,0.35)",
+                    position: "relative",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                  }}
+                >
+                  <span
+                    style={{
+                      fontSize: 11,
+                      fontWeight: 700,
+                      color: "#ffffff",
+                      background: "rgba(0,0,0,0.6)",
+                      padding: "4px 12px",
+                      borderRadius: 100,
+                      backdropFilter: "blur(4px)",
+                    }}
                   >
-                    <Sun className="w-3.5 h-3.5" />
-                    <span>{t("camera_overlay.lighting", "Lighting")}: {lighting}</span>
-                  </div>
-
-                  {/* Focus / Sharpness Indicator */}
-                  <div
-                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl border backdrop-blur-md text-xs font-mono font-medium transition-colors ${
-                      focus === "Good"
-                        ? "bg-[#2E7D32]/70 border-[#52B788] text-white"
-                        : "bg-amber-950/70 border-amber-500/50 text-amber-300"
-                    }`}
-                  >
-                    <Focus className="w-3.5 h-3.5" />
-                    <span>{t("camera_overlay.focus", "Focus")}: {focus}</span>
-                  </div>
-
-                  {/* Framing Indicator */}
-                  <div
-                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl border backdrop-blur-md text-xs font-mono font-medium transition-colors ${
-                      framing === "Ready"
-                        ? "bg-[#2E7D32]/70 border-[#52B788] text-white"
-                        : "bg-black/70 border-white/20 text-neutral-300"
-                    }`}
-                  >
-                    <Maximize2 className="w-3.5 h-3.5" />
-                    <span>{t("camera_overlay.framing", "Framing")}: {framing}</span>
-                  </div>
-                </div>
-
-                {/* Central Leaf Guide Reticle Box */}
-                <div className="relative w-64 h-64 sm:w-72 sm:h-72 my-auto flex items-center justify-center">
-                  <div
-                    className={`absolute inset-0 rounded-3xl border-2 transition-all duration-200 ${
-                      framing === "Ready" && focus === "Good" && lighting === "Good"
-                        ? "border-[#52B788] shadow-[0_0_20px_rgba(82,183,136,0.5)]"
-                        : "border-white/40 border-dashed"
-                    }`}
-                  >
-                    {/* Corners */}
-                    <div className="absolute -top-1 -left-1 w-5 h-5 border-t-4 border-l-4 border-[#52B788] rounded-tl-lg" />
-                    <div className="absolute -top-1 -right-1 w-5 h-5 border-t-4 border-r-4 border-[#52B788] rounded-tr-lg" />
-                    <div className="absolute -bottom-1 -left-1 w-5 h-5 border-b-4 border-l-4 border-[#52B788] rounded-bl-lg" />
-                    <div className="absolute -bottom-1 -right-1 w-5 h-5 border-b-4 border-r-4 border-[#52B788] rounded-br-lg" />
-                  </div>
-
-                  {/* Subtle guidance text inside reticle */}
-                  <span className="text-xs text-white/70 font-medium px-3 py-1 rounded-full bg-black/50 backdrop-blur-sm border border-white/10">
-                    {t("camera_overlay.instruction", "Place one leaf inside the frame")}
+                    Place Leaf Here
                   </span>
                 </div>
-
-                {/* Technical Disclaimer */}
-                <div className="text-center text-[10px] text-[#8EA396] font-mono max-w-sm">
-                  {t("camera_overlay.quality_disclaimer", "Only these are image-quality indicators. Do not claim biological validity from these checks.")}
-                </div>
               </div>
-            </>
+            </div>
           )}
 
-          {/* CAPTURED SPECIMEN PREVIEW VIEW */}
+          {/* Captured Preview */}
           {capturedBlobUrl && (
-            <div className="relative w-full h-full flex items-center justify-center p-4 z-20">
-              <div className="relative rounded-2xl overflow-hidden border border-[#2E7D32]/40 max-h-[380px] shadow-2xl bg-black">
-                <img
-                  src={capturedBlobUrl}
-                  alt="Captured Leaf Specimen"
-                  className="w-full h-full object-contain max-h-[360px]"
-                />
+            <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center", padding: 12 }}>
+              <img
+                src={capturedBlobUrl}
+                alt="Captured Leaf"
+                style={{ maxHeight: "350px", maxWidth: "100%", objectFit: "contain", borderRadius: 14 }}
+              />
+            </div>
+          )}
+
+          {/* Camera Permission Denied or Unavailable Fallback */}
+          {permissionStatus !== "granted" && !capturedBlobUrl && (
+            <div style={{ textAlign: "center", padding: 24, maxWidth: 380, zIndex: 10 }}>
+              <div
+                style={{
+                  width: 50,
+                  height: 50,
+                  borderRadius: 16,
+                  background: "rgba(220,38,38,0.15)",
+                  border: "1px solid rgba(220,38,38,0.3)",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  color: "#f87171",
+                  margin: "0 auto 14px",
+                }}
+              >
+                <CameraOff size={24} />
               </div>
+              <h4 style={{ color: "white", fontSize: 16, fontWeight: 800, margin: "0 0 6px" }}>
+                Live Stream Unavailable
+              </h4>
+              <p style={{ color: "#8ea396", fontSize: 12, margin: "0 0 18px", lineHeight: 1.5 }}>
+                {errorMessage || "Click below to snap a leaf photo using your device's built-in camera app."}
+              </p>
+              <button
+                type="button"
+                onClick={() => nativeCameraInputRef.current?.click()}
+                style={{
+                  background: "#2e7d32",
+                  color: "white",
+                  border: 0,
+                  borderRadius: 12,
+                  padding: "12px 20px",
+                  fontSize: 13,
+                  fontWeight: 800,
+                  cursor: "pointer",
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: 8,
+                }}
+              >
+                <Smartphone size={16} /> Open Device Camera App
+              </button>
             </div>
           )}
         </div>
 
         {/* Footer Actions */}
-        <div className="px-6 py-4 bg-[#12231A]/95 border-t border-[#2E7D32]/20 z-20 flex items-center justify-between gap-3">
+        <div className="leaf-capture-footer">
           {!capturedBlobUrl ? (
-            <div className="w-full flex items-center justify-between">
-              <span className="text-xs text-[#8EA396] hidden sm:inline">
-                {framing === "Ready" && focus === "Good" ? "Specimen in focus" : "Align leaf inside frame"}
-              </span>
+            <div style={{ display: "flex", width: "100%", justifyContent: "space-between", alignItems: "center", gap: 10 }}>
+              <button
+                type="button"
+                onClick={() => nativeCameraInputRef.current?.click()}
+                style={{
+                  background: "rgba(255,255,255,0.08)",
+                  border: "1px solid rgba(255,255,255,0.18)",
+                  color: "#dce6dc",
+                  borderRadius: 12,
+                  padding: "10px 14px",
+                  fontSize: 12,
+                  fontWeight: 700,
+                  cursor: "pointer",
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: 6,
+                }}
+              >
+                <Smartphone size={14} /> System Camera
+              </button>
 
               <button
                 type="button"
-                onClick={handleCaptureLeaf}
+                onClick={handleCaptureFromVideo}
                 disabled={permissionStatus !== "granted"}
-                className="btn-forest !px-7 !py-3 !text-sm flex items-center gap-2 mx-auto sm:mx-0 shadow-lg shadow-[#2E7D32]/30 disabled:opacity-50"
+                style={{
+                  background: "#2e7d32",
+                  color: "white",
+                  border: 0,
+                  borderRadius: 12,
+                  padding: "12px 28px",
+                  fontSize: 13,
+                  fontWeight: 800,
+                  cursor: permissionStatus === "granted" ? "pointer" : "not-allowed",
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: 8,
+                  opacity: permissionStatus === "granted" ? 1 : 0.5,
+                  boxShadow: "0 4px 14px rgba(46,125,50,0.4)",
+                }}
               >
-                <Camera className="w-4 h-4" />
-                <span>{t("scan.capture_leaf", "Capture Leaf")}</span>
+                <Camera size={16} /> Snap Photo
               </button>
             </div>
           ) : (
-            <div className="w-full flex items-center justify-between gap-3">
+            <div style={{ display: "flex", width: "100%", justifyContent: "space-between", alignItems: "center", gap: 10 }}>
               <button
                 type="button"
                 onClick={handleRetake}
-                className="btn-outline !px-5 !py-2.5 !text-xs !text-white flex items-center gap-2"
+                style={{
+                  background: "rgba(255,255,255,0.08)",
+                  border: "1px solid rgba(255,255,255,0.2)",
+                  color: "white",
+                  borderRadius: 12,
+                  padding: "10px 18px",
+                  fontSize: 12,
+                  fontWeight: 700,
+                  cursor: "pointer",
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: 6,
+                }}
               >
-                <RotateCcw className="w-4 h-4" />
-                <span>{t("scan.retake", "Retake")}</span>
+                <RotateCcw size={14} /> Retake
               </button>
 
               <button
                 type="button"
-                onClick={handleUsePhoto}
-                className="btn-forest !px-7 !py-2.5 !text-sm flex items-center gap-2 shadow-lg shadow-[#2E7D32]/30"
+                onClick={handleConfirmPhoto}
+                style={{
+                  background: "#2e7d32",
+                  color: "white",
+                  border: 0,
+                  borderRadius: 12,
+                  padding: "11px 24px",
+                  fontSize: 13,
+                  fontWeight: 800,
+                  cursor: "pointer",
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: 8,
+                  boxShadow: "0 4px 14px rgba(46,125,50,0.4)",
+                }}
               >
-                <span>{t("scan.use_photo", "Use Photo")}</span>
-                <ArrowRight className="w-4 h-4" />
+                <span>Use This Leaf Photo</span>
+                <ArrowRight size={15} />
               </button>
             </div>
           )}
