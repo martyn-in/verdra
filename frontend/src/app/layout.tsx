@@ -23,6 +23,7 @@ export const viewport: Viewport = {
 };
 
 import { LanguageProvider } from "@/context/LanguageContext";
+import WebsiteLockGate from "@/components/auth/WebsiteLockGate";
 
 export default function RootLayout({
   children,
@@ -45,7 +46,9 @@ export default function RootLayout({
       </head>
       <body className="antialiased">
         <LanguageProvider>
-          {children}
+          <WebsiteLockGate>
+            {children}
+          </WebsiteLockGate>
         </LanguageProvider>
       </body>
     </html>

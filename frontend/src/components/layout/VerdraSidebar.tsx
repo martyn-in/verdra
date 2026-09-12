@@ -19,10 +19,12 @@ import {
   X,
   ChevronRight,
   LogOut,
+  Lock,
 } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import LanguageSelector from "@/components/common/LanguageSelector";
 import OfflineQueueBadge from "@/components/common/OfflineQueueBadge";
+import { lockWebsite } from "@/components/auth/WebsiteLockGate";
 
 interface NavItem {
   href: string;
@@ -155,8 +157,19 @@ export default function VerdraSidebar({ children }: { children?: React.ReactNode
             );
           })}
 
+          {/* Lock Website Button */}
+          <button
+            type="button"
+            onClick={() => lockWebsite()}
+            className="w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-semibold text-[#66736B] hover:bg-[#FEF2F2] hover:text-[#DC2626] transition-colors border border-transparent hover:border-[#FCA5A5]/40 mb-1"
+            title="Lock Website (Code: 143)"
+          >
+            <Lock className="w-4 h-4 shrink-0 text-[#66736B]" />
+            <span>Lock Website</span>
+          </button>
+
           {/* Profile Card */}
-          <div className="pt-2 mt-2 border-t border-[#DCE8DC]/50 flex items-center justify-between px-3 py-2">
+          <div className="pt-2 mt-1 border-t border-[#DCE8DC]/50 flex items-center justify-between px-3 py-2">
             <div className="flex items-center gap-2.5 min-w-0">
               <div className="w-8 h-8 rounded-full bg-[#EEF6EC] border border-[#DCE8DC] flex items-center justify-center text-[#2E7D32] shrink-0 font-bold text-xs">
                 <User className="w-4 h-4 text-[#12372A]" />
@@ -276,6 +289,17 @@ export default function VerdraSidebar({ children }: { children?: React.ReactNode
                 <ScanLine className="w-4 h-4" />
                 <span>Scan New Crop</span>
               </Link>
+              <button
+                type="button"
+                onClick={() => {
+                  setMobileDrawerOpen(false);
+                  lockWebsite();
+                }}
+                className="w-full mt-2 flex items-center justify-center gap-2 py-2.5 rounded-xl text-xs font-semibold text-[#DC2626] bg-[#FEF2F2] border border-[#FCA5A5]/50 transition-colors"
+              >
+                <Lock className="w-3.5 h-3.5" />
+                <span>Lock Website</span>
+              </button>
             </div>
           </div>
         </div>

@@ -34,7 +34,9 @@ import {
   Layers,
   Share2,
   MapPin,
+  Lock,
 } from "lucide-react";
+import { lockWebsite } from "@/components/auth/WebsiteLockGate";
 import {
   ChangeEvent,
   DragEvent,
@@ -419,6 +421,17 @@ function Landing({
             </div>
 
             <button
+              type="button"
+              onClick={() => lockWebsite()}
+              className="button secondary"
+              style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "8px 14px", fontSize: 13, borderColor: "rgba(18,55,42,0.15)" }}
+              title="Lock Website (Code: 143 to re-enter)"
+            >
+              <Lock size={15} />
+              <span>Lock</span>
+            </button>
+
+            <button
               className="button primary landing-scan-btn"
               onClick={() => navigate("scan")}
             >
@@ -662,6 +675,28 @@ function Shell({
         <div className="sidebar-bottom" style={{ display: "flex", flexDirection: "column", gap: 10 }}>
           <OfflineQueueBadge />
           <LanguageSelector />
+          <button
+            type="button"
+            onClick={() => lockWebsite()}
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: 8,
+              padding: "8px 12px",
+              borderRadius: 10,
+              background: "rgba(220, 38, 38, 0.08)",
+              border: "1px solid rgba(220, 38, 38, 0.2)",
+              color: "#dc2626",
+              fontSize: 12,
+              fontWeight: 700,
+              cursor: "pointer",
+              transition: "all 0.2s ease",
+            }}
+            title="Lock Website (Code: 143)"
+          >
+            <Lock size={14} />
+            <span>Lock Website</span>
+          </button>
           <div className="profile-card">
             <span className="avatar">FM</span>
             <div>
