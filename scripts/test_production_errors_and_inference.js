@@ -87,13 +87,13 @@ async function verify() {
     const chunkUrl = `${FRONTEND_URL}${match[1]}`;
     const chunkRes = await fetch(chunkUrl);
     const chunkText = await chunkRes.text();
-    if (chunkText.includes('Backend connection blocked.')) foundCorsError = true;
+    if (chunkText.includes('Crop analysis service is initializing.')) foundCorsError = true;
     if (chunkText.includes('Prediction endpoint not found.')) found404Error = true;
     if (chunkText.includes('AI model service error.')) found500Error = true;
     if (chunkText.includes('Crop analysis service unavailable.')) foundNetworkError = true;
   }
 
-  console.log(`✓ Bundle contains "Backend connection blocked.":        ${foundCorsError}`);
+  console.log(`✓ Bundle contains "Crop analysis service is initializing.": ${foundCorsError}`);
   console.log(`✓ Bundle contains "Prediction endpoint not found.":     ${found404Error}`);
   console.log(`✓ Bundle contains "AI model service error.":            ${found500Error}`);
   console.log(`✓ Bundle contains "Crop analysis service unavailable.": ${foundNetworkError}`);

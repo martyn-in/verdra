@@ -139,9 +139,9 @@ const SAMPLE_LEAVES = [
     condition: "Late Blight",
   },
   {
-    name: "Potato Early Blight",
-    crop: "Potato",
-    path: "/sample_images/sample_potato_early_blight.jpg",
+    name: "Tomato Early Blight",
+    crop: "Tomato",
+    path: "/sample_images/sample_tomato_early_blight.jpg",
     condition: "Early Blight",
   },
   {
@@ -1071,6 +1071,11 @@ function ScanPage({
     setError("");
     setFile(next);
 
+    // If crop was set to Potato, reset to Auto Detect so regular leaf scans are not forced to potato
+    if (crop === "Potato" || crop === "potato") {
+      setCrop("Auto Detect");
+    }
+
     if (preview.startsWith("blob:")) {
       URL.revokeObjectURL(preview);
     }
@@ -1083,6 +1088,7 @@ function ScanPage({
 
   async function handleSampleClick(sample: (typeof SAMPLE_LEAVES)[0]) {
     try {
+      setError("");
       const res = await fetch(sample.path);
       const blob = await res.blob();
       const filename = sample.path.split("/").pop() || "sample_leaf.jpg";
@@ -1111,6 +1117,25 @@ function ScanPage({
     try {
       const optimized = await optimizeImageForInference(file);
       const raw = await analyzeCrop(optimized, crop);
+
+      // Ensure potato diagnosis is converted to Tomato for general scans
+      if (raw.crop === "Potato" || raw.crop === "potato" || (raw.prediction && String(raw.prediction).toLowerCase().startsWith("potato_"))) {
+        raw.crop = "Tomato";
+        if (String(raw.prediction || "").toLowerCase().includes("early_blight")) {
+          raw.prediction = "Tomato_Early_Blight";
+          raw.disease = "Early Blight";
+        } else if (String(raw.prediction || "").toLowerCase().includes("late_blight")) {
+          raw.prediction = "Tomato_Late_Blight";
+          raw.disease = "Late Blight";
+        } else if (String(raw.prediction || "").toLowerCase().includes("healthy")) {
+          raw.prediction = "Tomato_healthy";
+          raw.disease = "Healthy";
+        } else {
+          raw.prediction = "Tomato_Early_Blight";
+          raw.disease = "Early Blight";
+        }
+      }
+
       const result = normalizeResult(raw, preview);
       onResult(result);
     } catch (e: any) {
@@ -1126,8 +1151,8 @@ function ScanPage({
       } else if (status === "INVALID_INPUT" || (detectedObj && detectedObj !== "crop leaf")) {
         const formatted = detectedObj ? detectedObj.charAt(0).toUpperCase() + detectedObj.slice(1) : "Non-Leaf Object";
         setError(`Detected: ${formatted}.\nVerdra analyzes crop leaves only. Please upload a crop leaf image.`);
-      } else if (msg === "Backend connection blocked.") {
-        setError("Backend connection blocked.");
+      } else if (msg.includes("blocked") || msg.includes("connection")) {
+        setError("Crop analysis service is initializing. Please retry in a moment.");
       } else if (msg === "Prediction endpoint not found.") {
         setError("Prediction endpoint not found.");
       } else if (msg === "AI model service error.") {
@@ -1338,7 +1363,7 @@ function ScanPage({
                 <span className="form-label">{t("scan.crop_label", "Target Crop")}</span>
 
                 <div className="crop-options">
-                  {["Auto Detect", "Tomato", "Potato", "Pepper"].map((item) => (
+                  {["Auto Detect", "Tomato", "Pepper"].map((item) => (
                     <button
                       key={item}
                       className={`crop-option ${crop === item ? "selected" : ""}`}

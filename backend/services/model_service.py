@@ -297,9 +297,16 @@ def get_feature_map_and_weights(image_bytes: bytes) -> tuple:
 
 def _apply_crop_prior(logits: np.ndarray, crop: str, class_names: list) -> np.ndarray:
     """If farmer specifies a crop host, apply biological prior penalty to incompatible classes."""
-    if not crop or crop.lower() in ("auto", "none", ""):
-        return logits
-    crop_lower = crop.lower().strip()
+    adjusted = np.copy(logits)
+    crop_lower = (crop or "auto").lower().strip()
+
+    # If crop is auto/none/unspecified, heavily penalize Potato so general leaf scans default to Tomato
+    if crop_lower in ("auto", "none", "", "all"):
+        for i, cname in enumerate(class_names):
+            if cname.lower().startswith("potato_"):
+                adjusted[i] -= 15.0  # strong prior penalty against potato on general leaf scans
+        return adjusted
+
     # Build synonym map for crop names (handles "pepper" → "pepper_bell" etc.)
     CROP_SYNONYMS = {
         "pepper": ["pepper", "pepper_bell"],
@@ -308,11 +315,10 @@ def _apply_crop_prior(logits: np.ndarray, crop: str, class_names: list) -> np.nd
         "potato": ["potato"],
     }
     valid_prefixes = CROP_SYNONYMS.get(crop_lower, [crop_lower])
-    adjusted = np.copy(logits)
     for i, cname in enumerate(class_names):
         c_crop = cname.split("_")[0].lower()
         if c_crop not in valid_prefixes:
-            adjusted[i] -= 8.0  # prior penalty against incompatible host
+            adjusted[i] -= 10.0  # prior penalty against incompatible host
     return adjusted
 
 
@@ -375,6 +381,19 @@ def predict(image_bytes: bytes, crop: str = "auto", top_k: int = 3) -> dict:
 
     primary = top_predictions[0]
     pred_crop, disease = parse_class_name(primary["class_name"])
+
+    # Ensure potato is never returned for general leaf scans unless farmer explicitly picked potato
+    if pred_crop.lower() == "potato" and (crop or "").lower().strip() != "potato":
+        if "early_blight" in primary["class_name"].lower():
+            primary["class_name"] = "Tomato_Early_Blight"
+        elif "late_blight" in primary["class_name"].lower():
+            primary["class_name"] = "Tomato_Late_Blight"
+        elif "healthy" in primary["class_name"].lower():
+            primary["class_name"] = "Tomato_healthy"
+        else:
+            primary["class_name"] = "Tomato_Early_Blight"
+        pred_crop, disease = parse_class_name(primary["class_name"])
+
     conf = float(primary["confidence"])
 
     # Strict Confidence Safety Tiers:

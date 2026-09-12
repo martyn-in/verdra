@@ -7,6 +7,10 @@ export const API_URL = (
 ).replace(/\/+$/, "");
 
 export function getApiUrl(): string {
+  // In browser, use relative same-origin so Next.js serverless routes proxy seamlessly with zero CORS issues
+  if (typeof window !== "undefined") {
+    return "";
+  }
   return API_URL || "https://verdra.onrender.com";
 }
 
@@ -22,30 +26,29 @@ export class ApiError extends Error {
 }
 
 /**
- * Distinguish between browser CORS blocks and genuine network/server disconnects.
- * Standard fetch throws a generic TypeError: Failed to fetch for both cases.
- * By probing /health with mode: 'no-cors':
- * - If the probe succeeds: network is connected and host is reachable, meaning the original request was blocked by CORS policy.
- * - If the probe fails: network is offline or backend is unreachable.
+ * Distinguish between browser network disconnects and server errors.
  */
 export async function classifyNetworkOrCorsError(baseUrl: string = getApiUrl()): Promise<string> {
   if (typeof navigator !== "undefined" && !navigator.onLine) {
-    return "Crop analysis service unavailable.";
+    return "Crop analysis service unavailable. Please check your internet connection.";
   }
 
   try {
+    const probeUrl = baseUrl ? `${baseUrl}/health` : "/api/predict";
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 4000);
-    await fetch(`${baseUrl}/health`, {
-      mode: "no-cors",
+    const timeoutId = setTimeout(() => controller.abort(), 3000);
+    const res = await fetch(probeUrl, {
+      method: "GET",
       cache: "no-store",
       signal: controller.signal,
-    });
+    }).catch(() => null);
     clearTimeout(timeoutId);
-    // If no-cors succeeded, host is reachable, so standard fetch failure was due to CORS policy block
-    return "Backend connection blocked.";
+
+    if (res && (res.ok || res.status === 405)) {
+      return "Crop analysis service unavailable. Please retry.";
+    }
+    return "Crop analysis service unavailable.";
   } catch {
-    // If no-cors also failed/timed out, host is unreachable or network failed
     return "Crop analysis service unavailable.";
   }
 }

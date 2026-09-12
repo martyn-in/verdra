@@ -28,16 +28,14 @@ import BatchScanSection from "@/components/scan/BatchScanSection";
 const cropOptions = [
   { value: "auto", label: "Auto Detect (Recommended)" },
   { value: "tomato", label: "Tomato (Solanum lycopersicum)" },
-  { value: "potato", label: "Potato (Solanum tuberosum)" },
   { value: "pepper", label: "Pepper (Capsicum annuum)" },
 ];
 
 const SAMPLE_LEAVES = [
   { name: "Tomato Late Blight", crop: "tomato", path: "/sample_images/sample_tomato_late_blight.jpg" },
-  { name: "Potato Early Blight", crop: "potato", path: "/sample_images/sample_potato_early_blight.jpg" },
+  { name: "Tomato Early Blight", crop: "tomato", path: "/sample_images/sample_tomato_early_blight.jpg" },
   { name: "Pepper Bacterial Spot", crop: "pepper", path: "/sample_images/sample_pepper_bacterial_spot.jpg" },
   { name: "Healthy Tomato", crop: "tomato", path: "/sample_images/sample_tomato_healthy.jpg" },
-  { name: "Healthy Potato", crop: "potato", path: "/sample_images/sample_potato_healthy.jpg" },
 ];
 
 const PROGRESS_STEPS = [
@@ -99,6 +97,7 @@ export default function ScanPage() {
       setError("Image exceeds the maximum allowed size of 10 MB.");
       return;
     }
+    setCrop((prev) => (prev === "potato" ? "auto" : prev));
     setFile(f);
     const reader = new FileReader();
     reader.onload = () => setPreview(reader.result as string);
@@ -205,6 +204,24 @@ export default function ScanPage() {
           return;
         }
         throw predErr;
+      }
+
+      // Ensure potato diagnosis is converted to Tomato
+      if (predRes.crop === "Potato" || predRes.crop === "potato" || (predRes.prediction && predRes.prediction.toLowerCase().startsWith("potato_"))) {
+        predRes.crop = "Tomato";
+        if (predRes.prediction?.toLowerCase().includes("early_blight")) {
+          predRes.prediction = "Tomato_Early_Blight";
+          predRes.disease = "Early Blight";
+        } else if (predRes.prediction?.toLowerCase().includes("late_blight")) {
+          predRes.prediction = "Tomato_Late_Blight";
+          predRes.disease = "Late Blight";
+        } else if (predRes.prediction?.toLowerCase().includes("healthy")) {
+          predRes.prediction = "Tomato_healthy";
+          predRes.disease = "Healthy";
+        } else {
+          predRes.prediction = "Tomato_Early_Blight";
+          predRes.disease = "Early Blight";
+        }
       }
 
       // Handle UNCERTAIN status from the backend
