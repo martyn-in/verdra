@@ -226,21 +226,41 @@ export default function VoiceReadout({
     utterance.rate = 0.92; // Natural, clear pacing for field farmers
     utterance.pitch = 1.0;
 
+    const keepAliveRef = { current: null as any };
+
     utterance.onstart = () => {
       setIsPlaying(true);
       setIsPaused(false);
+      // Chrome audio keep-alive to prevent premature 15s pause bug
+      keepAliveRef.current = setInterval(() => {
+        if (typeof window !== "undefined" && "speechSynthesis" in window) {
+          if (window.speechSynthesis.speaking && !window.speechSynthesis.paused) {
+            window.speechSynthesis.pause();
+            window.speechSynthesis.resume();
+          }
+        }
+      }, 9000);
     };
 
-    utterance.onend = () => {
+    const cleanup = () => {
+      if (keepAliveRef.current) {
+        clearInterval(keepAliveRef.current);
+        keepAliveRef.current = null;
+      }
       setIsPlaying(false);
       setIsPaused(false);
+      if (typeof window !== "undefined") {
+        delete (window as any).__verdraActiveUtterance;
+      }
     };
 
-    utterance.onerror = (e) => {
-      console.warn("Speech synthesis notice:", e);
-      setIsPlaying(false);
-      setIsPaused(false);
-    };
+    utterance.onend = cleanup;
+    utterance.onerror = cleanup;
+
+    // Prevent GC in Chromium engines
+    if (typeof window !== "undefined") {
+      (window as any).__verdraActiveUtterance = utterance;
+    }
 
     window.speechSynthesis.speak(utterance);
   };
@@ -261,8 +281,8 @@ export default function VoiceReadout({
 
   if (!supported) {
     return (
-      <div className="flex items-center gap-2 text-xs text-[#8EA396]">
-        <VolumeX className="w-4 h-4 text-neutral-400" />
+      <div className="flex items-center gap-2 text-sm text-[#8EA396]">
+        <VolumeX className="w-5 h-5 text-neutral-400" />
         <span>{t("result.speech_unsupported", "Voice read-out is unavailable on this device.")}</span>
       </div>
     );
@@ -274,11 +294,12 @@ export default function VoiceReadout({
         display: "inline-flex",
         alignItems: "center",
         flexWrap: "wrap",
-        gap: 8,
-        padding: "6px 12px",
-        background: "rgba(18, 55, 42, 0.05)",
-        border: "1px solid #DCE6DC",
-        borderRadius: 14,
+        gap: 10,
+        padding: "8px 14px",
+        background: "rgba(18, 55, 42, 0.06)",
+        border: "1.5px solid #D1E2D1",
+        borderRadius: 16,
+        boxShadow: "0 2px 8px rgba(18, 55, 42, 0.05)",
       }}
     >
       {!isPlaying ? (
@@ -288,29 +309,31 @@ export default function VoiceReadout({
           style={{
             display: "inline-flex",
             alignItems: "center",
-            gap: 7,
-            padding: "6px 12px",
+            gap: 9,
+            padding: "10px 18px",
             background: "#12372A",
             color: "#FFFFFF",
-            borderRadius: 10,
+            borderRadius: 12,
             border: "none",
-            fontSize: 12,
-            fontWeight: 700,
+            fontSize: 14,
+            fontWeight: 800,
             cursor: "pointer",
+            boxShadow: "0 2px 6px rgba(18, 55, 42, 0.25)",
+            transition: "all 0.15s ease",
           }}
           title="Play voice report in active language"
         >
-          <Volume2 size={15} color="#4ADE80" />
+          <Volume2 size={19} color="#4ADE80" />
           <span>
             {activeVoiceLang === "te"
-              ? "వినండి (తెలుగు)"
+              ? "వినండి (తెలుగు వాయిస్)"
               : activeVoiceLang === "hi"
-              ? "सुनें (हिन्दी)"
+              ? "सुनें (हिन्दी आवाज़)"
               : "Read Aloud (Voice)"}
           </span>
         </button>
       ) : (
-        <div style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
+        <div style={{ display: "inline-flex", alignItems: "center", gap: 8 }}>
           {isPaused ? (
             <button
               type="button"
@@ -318,18 +341,19 @@ export default function VoiceReadout({
               style={{
                 display: "inline-flex",
                 alignItems: "center",
-                gap: 5,
-                padding: "6px 10px",
+                gap: 7,
+                padding: "9px 16px",
                 background: "#2E7D32",
                 color: "white",
-                borderRadius: 9,
+                borderRadius: 11,
                 border: "none",
-                fontSize: 11,
-                fontWeight: 700,
+                fontSize: 13,
+                fontWeight: 800,
                 cursor: "pointer",
+                boxShadow: "0 2px 4px rgba(46, 125, 50, 0.2)",
               }}
             >
-              <Play size={13} />
+              <Play size={15} />
               <span>{t("result.resume", "Resume")}</span>
             </button>
           ) : (
@@ -339,18 +363,18 @@ export default function VoiceReadout({
               style={{
                 display: "inline-flex",
                 alignItems: "center",
-                gap: 5,
-                padding: "6px 10px",
+                gap: 7,
+                padding: "9px 16px",
                 background: "#E8F0E6",
                 color: "#12372A",
-                borderRadius: 9,
-                border: "1px solid #C4D9C2",
-                fontSize: 11,
-                fontWeight: 700,
+                borderRadius: 11,
+                border: "1.5px solid #A5D6A7",
+                fontSize: 13,
+                fontWeight: 800,
                 cursor: "pointer",
               }}
             >
-              <Pause size={13} />
+              <Pause size={15} />
               <span>{t("result.pause", "Pause")}</span>
             </button>
           )}
@@ -361,37 +385,39 @@ export default function VoiceReadout({
             style={{
               display: "inline-flex",
               alignItems: "center",
-              gap: 5,
-              padding: "6px 10px",
+              gap: 7,
+              padding: "9px 16px",
               background: "#FEE2E2",
               color: "#DC2626",
-              borderRadius: 9,
-              border: "1px solid #FECACA",
-              fontSize: 11,
-              fontWeight: 700,
+              borderRadius: 11,
+              border: "1.5px solid #FECACA",
+              fontSize: 13,
+              fontWeight: 800,
               cursor: "pointer",
             }}
           >
-            <Square size={13} />
+            <Square size={15} />
             <span>{t("result.stop", "Stop")}</span>
           </button>
         </div>
       )}
 
-      {/* Direct Vernacular Language Buttons */}
-      <div style={{ display: "inline-flex", alignItems: "center", gap: 4, marginLeft: 2 }}>
+      {/* Prominent Vernacular Language Selector Buttons */}
+      <div style={{ display: "inline-flex", alignItems: "center", gap: 6, marginLeft: 4 }}>
         <button
           type="button"
           onClick={() => handleSpeak("te")}
           style={{
-            padding: "4px 8px",
-            fontSize: 11,
-            fontWeight: activeVoiceLang === "te" ? 800 : 500,
-            background: activeVoiceLang === "te" ? "#E8F5E9" : "transparent",
-            color: activeVoiceLang === "te" ? "#2E7D32" : "#556059",
-            border: activeVoiceLang === "te" ? "1px solid #A5D6A7" : "1px solid transparent",
-            borderRadius: 8,
+            padding: "8px 14px",
+            fontSize: 13,
+            fontWeight: activeVoiceLang === "te" ? 800 : 600,
+            background: activeVoiceLang === "te" ? "#E8F5E9" : "rgba(255,255,255,0.8)",
+            color: activeVoiceLang === "te" ? "#1B5E20" : "#4A5D52",
+            border: activeVoiceLang === "te" ? "2px solid #2E7D32" : "1.5px solid #DCE6DC",
+            borderRadius: 11,
             cursor: "pointer",
+            boxShadow: activeVoiceLang === "te" ? "0 2px 6px rgba(46,125,50,0.18)" : "none",
+            transition: "all 0.15s ease",
           }}
           title="తెలుగులో వినండి (Listen in Telugu)"
         >
@@ -402,14 +428,16 @@ export default function VoiceReadout({
           type="button"
           onClick={() => handleSpeak("hi")}
           style={{
-            padding: "4px 8px",
-            fontSize: 11,
-            fontWeight: activeVoiceLang === "hi" ? 800 : 500,
-            background: activeVoiceLang === "hi" ? "#E8F5E9" : "transparent",
-            color: activeVoiceLang === "hi" ? "#2E7D32" : "#556059",
-            border: activeVoiceLang === "hi" ? "1px solid #A5D6A7" : "1px solid transparent",
-            borderRadius: 8,
+            padding: "8px 14px",
+            fontSize: 13,
+            fontWeight: activeVoiceLang === "hi" ? 800 : 600,
+            background: activeVoiceLang === "hi" ? "#E8F5E9" : "rgba(255,255,255,0.8)",
+            color: activeVoiceLang === "hi" ? "#1B5E20" : "#4A5D52",
+            border: activeVoiceLang === "hi" ? "2px solid #2E7D32" : "1.5px solid #DCE6DC",
+            borderRadius: 11,
             cursor: "pointer",
+            boxShadow: activeVoiceLang === "hi" ? "0 2px 6px rgba(46,125,50,0.18)" : "none",
+            transition: "all 0.15s ease",
           }}
           title="हिन्दी में सुनें (Listen in Hindi)"
         >
@@ -420,14 +448,16 @@ export default function VoiceReadout({
           type="button"
           onClick={() => handleSpeak("en")}
           style={{
-            padding: "4px 8px",
-            fontSize: 11,
-            fontWeight: activeVoiceLang === "en" ? 800 : 500,
-            background: activeVoiceLang === "en" ? "#E8F5E9" : "transparent",
-            color: activeVoiceLang === "en" ? "#2E7D32" : "#556059",
-            border: activeVoiceLang === "en" ? "1px solid #A5D6A7" : "1px solid transparent",
-            borderRadius: 8,
+            padding: "8px 14px",
+            fontSize: 13,
+            fontWeight: activeVoiceLang === "en" ? 800 : 600,
+            background: activeVoiceLang === "en" ? "#E8F5E9" : "rgba(255,255,255,0.8)",
+            color: activeVoiceLang === "en" ? "#1B5E20" : "#4A5D52",
+            border: activeVoiceLang === "en" ? "2px solid #2E7D32" : "1.5px solid #DCE6DC",
+            borderRadius: 11,
             cursor: "pointer",
+            boxShadow: activeVoiceLang === "en" ? "0 2px 6px rgba(46,125,50,0.18)" : "none",
+            transition: "all 0.15s ease",
           }}
           title="Listen in English"
         >

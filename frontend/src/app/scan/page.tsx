@@ -161,26 +161,47 @@ export default function ScanPage() {
       try {
         predRes = await api.predict(compressed, crop, fieldTag);
       } catch (predErr: any) {
-        // Check for non-leaf rejection (HTTP 422 with NOT_A_LEAF error)
+        clearInterval(stepInterval);
+        setAnalyzing(false);
+
+        // Check for unsupported crop leaf rejection (HTTP 422 with UNSUPPORTED_CROP error)
         if (
+          predErr?.payload?.status === "UNSUPPORTED_CROP" ||
+          predErr?.payload?.reason === "unsupported_crop" ||
+          predErr?.payload?.error_code === "UNSUPPORTED_CROP"
+        ) {
+          const plant = predErr?.payload?.detected_plant || predErr?.payload?.plant || "unsupported crop";
+          const displayMsg =
+            predErr?.payload?.message ||
+            predErr?.message ||
+            `Detected: ${plant.charAt(0).toUpperCase() + plant.slice(1)} leaf.\nThis crop is not currently supported.`;
+          setError(displayMsg);
+          return;
+        }
+
+        // Check for non-leaf rejection (HTTP 422 with NOT_A_LEAF or INVALID_INPUT error)
+        if (
+          predErr?.payload?.status === "INVALID_INPUT" ||
           predErr?.payload?.reason === "not_leaf" ||
           predErr?.payload?.error_code === "NOT_A_LEAF" ||
           predErr?.payload?.code === "NOT_A_LEAF"
         ) {
-          clearInterval(stepInterval);
-          setError("No crop leaf detected. Please upload a leaf image.");
-          setAnalyzing(false);
+          const obj = predErr?.payload?.detected_object || predErr?.payload?.object || "unrelated object";
+          const displayMsg =
+            predErr?.payload?.message ||
+            predErr?.message ||
+            `Detected: ${obj.charAt(0).toUpperCase() + obj.slice(1)}.\nVerdra analyzes crop leaves only. Please upload a crop leaf image.`;
+          setError(displayMsg);
           return;
         }
+
         // Check for quality rejection
         if (predErr?.payload?.reason === "image_quality_failed" || predErr?.status === 422) {
-          clearInterval(stepInterval);
           setError(
             predErr?.payload?.message ||
               predErr?.message ||
               "Image is too blurry. Please capture a sharper leaf image."
           );
-          setAnalyzing(false);
           return;
         }
         throw predErr;
@@ -339,7 +360,7 @@ export default function ScanPage() {
             <AlertCircle className="w-5 h-5 shrink-0 mt-0.5" />
             <div className="flex-1">
               <span className="font-bold block mb-0.5">Analysis Advisory</span>
-              <span>{error}</span>
+              <span className="whitespace-pre-line">{error}</span>
             </div>
             <button
               onClick={() => setError("")}

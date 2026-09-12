@@ -217,6 +217,41 @@ export async function checkQuality(file: File) {
   return response.json();
 }
 
+export interface ImageCheckResult {
+  object: string;
+  plant: string;
+  crop_supported: boolean;
+  confidence: number;
+  action: "CONTINUE" | "STOP";
+  detected_object?: string;
+  detected_plant?: string;
+  is_crop_leaf?: boolean;
+  supported_crop?: boolean;
+}
+
+export async function checkImageVision(file: File): Promise<ImageCheckResult> {
+  const baseUrl = getApiUrl();
+  const formData = new FormData();
+  formData.append("image", file);
+  formData.append("file", file);
+
+  let response: Response;
+  try {
+    response = await fetch(`${baseUrl}/api/image-check`, {
+      method: "POST",
+      body: formData,
+    });
+  } catch (err) {
+    await handleFetchError(err, baseUrl);
+  }
+
+  if (!response.ok) {
+    await handleResponseError(response, "Image validation check failed.");
+  }
+
+  return response.json();
+}
+
 export async function processOpenCvScan(file: File) {
   const baseUrl = getApiUrl();
   const formData = new FormData();
@@ -575,6 +610,7 @@ export const api = {
   report: generateReport,
   modelPerformance: getModelPerformance,
   checkQuality,
+  imageCheck: checkImageVision,
   opencvScan: processOpenCvScan,
   batchPredict,
   registerPlant,

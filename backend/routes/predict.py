@@ -24,6 +24,7 @@ from services import (
     opencv_service,
     storage_service,
     image_understanding_service,
+    openai_vision_service,
 )
 
 logger = logging.getLogger(__name__)
@@ -75,6 +76,51 @@ async def process_opencv_scan_endpoint(file: UploadFile = File(...)):
     
     result = opencv_service.process_leaf_scan(image_bytes)
     return result
+
+
+@router.post("/image-check")
+async def image_check_endpoint(
+    image: Optional[UploadFile] = File(default=None),
+    file: Optional[UploadFile] = File(default=None),
+):
+    """
+    OpenAI Vision pre-validation check endpoint:
+    Identifies what is present in the image:
+    - object (e.g. bottle, human, dog, mango leaf, tomato leaf)
+    - plant (e.g. tomato, potato, pepper, mango, none)
+    - crop_supported (boolean)
+    - confidence (float)
+    - action ("CONTINUE" or "STOP")
+    """
+    target = image or file
+    if not target:
+        raise HTTPException(status_code=400, detail="No image file provided in upload.")
+
+    if target.content_type and target.content_type.lower() not in ALLOWED_TYPES:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Unsupported file type: {target.content_type}. Please upload JPG, PNG, or WEBP."
+        )
+
+    image_bytes = await target.read()
+    if len(image_bytes) == 0:
+        raise HTTPException(status_code=400, detail="Empty file uploaded.")
+
+    check_res = await openai_vision_service.analyze_image_with_openai(image_bytes)
+    crop_supported = bool(check_res.get("crop_supported", False))
+    logger.info(f"image_check_result: {check_res} | disease_model_called: {crop_supported}")
+
+    return {
+        "object": check_res.get("object", "unknown"),
+        "plant": check_res.get("plant", "none"),
+        "crop_supported": crop_supported,
+        "confidence": float(check_res.get("confidence", 0.95)),
+        "action": check_res.get("action", "STOP"),
+        "detected_object": check_res.get("detected_object", check_res.get("object", "unknown")),
+        "detected_plant": check_res.get("detected_plant", check_res.get("plant", "none")),
+        "is_crop_leaf": bool(check_res.get("is_crop_leaf", False)),
+        "supported_crop": crop_supported,
+    }
 
 
 def _compute_rescan_interval(disease: str, severity: str, risk_level: str, is_healthy: bool) -> dict:
@@ -185,25 +231,58 @@ async def execute_real_inference_pipeline(
             "image_quality": quality,
         }
 
-    # 3. General Image Understanding & Pre-Classification
-    understanding = image_understanding_service.classify_image(image_bytes)
-    if not understanding.get("is_crop_leaf", False):
-        detected_obj = understanding.get("detected_object", "other")
-        conf = float(understanding.get("confidence", 0.0))
-        rejection_msg = "This image is not a crop leaf. Please upload a clear crop leaf image."
-        logger.warning(f"Inference rejected: not_crop_leaf ({detected_obj}, conf={conf:.4f})")
+    # 3. OpenAI Vision Pre-Validation & Image Understanding
+    vision_check = await openai_vision_service.analyze_image_with_openai(image_bytes)
+    detected_obj = vision_check.get("object", "unknown")
+    detected_plant = vision_check.get("plant", "none")
+    is_leaf = bool(vision_check.get("is_crop_leaf", False))
+    crop_supported = bool(vision_check.get("crop_supported", False))
+    vision_conf = float(vision_check.get("confidence", 0.95))
+
+    # RULE 1: If image contains bottle, person, animal, vehicle, document or unrelated object:
+    # STOP. Do not call disease model.
+    if not is_leaf:
+        logger.info(f"image_check_result: {vision_check} | disease_model_called: false")
+        rejection_msg = f"Detected: {detected_obj.capitalize()}.\nVerdra analyzes crop leaves only. Please upload a crop leaf image."
+        logger.warning(f"Inference rejected: not_crop_leaf ({detected_obj}, conf={vision_conf:.4f})")
         return {
             "status": "INVALID_INPUT",
             "valid_leaf": False,
             "reason": "not_leaf",
             "error_code": "NOT_A_LEAF",
             "detected_object": detected_obj,
-            "confidence": conf,
+            "detected_plant": "none",
+            "confidence": vision_conf,
+            "disease_model_called": False,
             "message": rejection_msg,
             "detail": rejection_msg,
             "image_quality": quality,
-            "probabilities": understanding.get("probabilities", {})
         }
+
+    # RULE 2: If image contains a plant leaf but unsupported crop (e.g. Mango leaf):
+    # STOP. Do not call disease model. Do not classify it as tomato/potato/pepper disease.
+    if is_leaf and not crop_supported:
+        logger.info(f"image_check_result: {vision_check} | disease_model_called: false")
+        plant_display = detected_obj.capitalize() if "leaf" in detected_obj.lower() else f"{detected_plant.capitalize()} leaf"
+        rejection_msg = f"Detected: {plant_display}.\nThis crop is not currently supported."
+        logger.warning(f"Inference rejected: unsupported_crop ({detected_obj}, plant={detected_plant})")
+        return {
+            "status": "UNSUPPORTED_CROP",
+            "valid_leaf": True,
+            "reason": "unsupported_crop",
+            "error_code": "UNSUPPORTED_CROP",
+            "detected_object": detected_obj,
+            "detected_plant": detected_plant,
+            "confidence": vision_conf,
+            "disease_model_called": False,
+            "message": rejection_msg,
+            "detail": rejection_msg,
+            "image_quality": quality,
+        }
+
+    # RULE 3: Supported crop leaf (Tomato, Potato, Pepper)
+    # Continue: Leaf validation -> Disease model -> Grad-CAM -> Severity -> Risk -> Guidance
+    logger.info(f"image_check_result: {vision_check} | disease_model_called: true")
 
     # 4. Foliar leaf validation
     leaf_check = leaf_validator_service.predict(image_bytes)
@@ -216,8 +295,10 @@ async def execute_real_inference_pipeline(
             "valid_leaf": False,
             "reason": "not_leaf",
             "error_code": "NOT_A_LEAF",
-            "detected_object": understanding.get("detected_object", "other"),
+            "detected_object": detected_obj,
+            "detected_plant": detected_plant,
             "confidence": float(round(1.0 - leaf_prob, 4)),
+            "disease_model_called": False,
             "message": rejection_msg,
             "detail": rejection_msg,
             "leaf_probability": leaf_prob,
@@ -227,16 +308,20 @@ async def execute_real_inference_pipeline(
             "image_quality": quality,
         }
 
-    # 4. Supported crop host check
+    # 5. Supported crop host check
     supported_crops = {"tomato", "potato", "pepper", "pepper_bell", "bell pepper", "auto", "none", ""}
     clean_crop = (crop or "auto").lower().strip()
     if clean_crop not in supported_crops:
         rejection_msg = f"Selected crop '{crop}' is not supported by the trained model (supported: Tomato, Potato, Pepper)."
         logger.warning(f"Inference rejected: unsupported_crop - {rejection_msg}")
         return {
-            "valid_leaf": False,
+            "status": "UNSUPPORTED_CROP",
+            "valid_leaf": True,
             "reason": "unsupported_crop",
             "error_code": "UNSUPPORTED_CROP",
+            "detected_object": detected_obj,
+            "detected_plant": detected_plant,
+            "disease_model_called": False,
             "message": rejection_msg,
             "detail": rejection_msg,
             "image_quality": quality,
@@ -257,7 +342,9 @@ async def execute_real_inference_pipeline(
         }
 
     pred_res["valid_leaf"] = True
-    pred_res["detected_object"] = "crop leaf"
+    pred_res["detected_object"] = detected_obj
+    pred_res["detected_plant"] = detected_plant
+    pred_res["disease_model_called"] = True
     pred_res["leaf_score"] = leaf_check.get("leaf_score", 1.0)
     pred_res["image_quality"] = quality
     pred_res["selected_crop"] = crop
@@ -500,7 +587,7 @@ async def predict_disease(
         batch_id=batch_id,
     )
 
-    if not result.get("valid_leaf", True):
+    if not result.get("valid_leaf", True) or result.get("status") in ("INVALID_INPUT", "UNSUPPORTED_CROP"):
         return JSONResponse(status_code=422, content=result)
 
     return result

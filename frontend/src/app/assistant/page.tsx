@@ -236,12 +236,37 @@ export default function AssistantPage() {
       utterance.lang = langCode;
     }
 
-    utterance.rate = 0.94;
+    utterance.rate = 0.92;
     utterance.pitch = 1.0;
 
-    utterance.onstart = () => setSpeakingMessageId(msgId);
-    utterance.onend = () => setSpeakingMessageId(null);
-    utterance.onerror = () => setSpeakingMessageId(null);
+    let keepAliveTimer: any = null;
+
+    utterance.onstart = () => {
+      setSpeakingMessageId(msgId);
+      keepAliveTimer = setInterval(() => {
+        if (typeof window !== "undefined" && "speechSynthesis" in window) {
+          if (window.speechSynthesis.speaking && !window.speechSynthesis.paused) {
+            window.speechSynthesis.pause();
+            window.speechSynthesis.resume();
+          }
+        }
+      }, 9000);
+    };
+
+    const cleanup = () => {
+      if (keepAliveTimer) clearInterval(keepAliveTimer);
+      setSpeakingMessageId(null);
+      if (typeof window !== "undefined") {
+        delete (window as any).__assistantActiveUtterance;
+      }
+    };
+
+    utterance.onend = cleanup;
+    utterance.onerror = cleanup;
+
+    if (typeof window !== "undefined") {
+      (window as any).__assistantActiveUtterance = utterance;
+    }
 
     window.speechSynthesis.speak(utterance);
   }
@@ -510,22 +535,22 @@ export default function AssistantPage() {
                         <button
                           type="button"
                           onClick={() => speakAssistantMessage(m.id, m.content)}
-                          className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-lg text-[11px] font-medium transition-colors ${
+                          className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-xl text-xs font-bold transition-all shadow-2xs ${
                             isSpeakingThis
-                              ? "bg-red-100 text-red-700 border border-red-200"
-                              : "bg-[#EEF6EC] text-[#2E7D32] hover:bg-[#E0EFE0] border border-[#DCE8DC]"
+                              ? "bg-red-600 text-white border border-red-600 shadow-sm"
+                              : "bg-[#EEF6EC] text-[#1B5E20] hover:bg-[#E0EFE0] border border-[#C8DEC8]"
                           }`}
-                          title="Read message aloud"
+                          title="Read message aloud in active language"
                         >
                           {isSpeakingThis ? (
                             <>
-                              <Square size={11} />
+                              <Square size={13} className="fill-current" />
                               <span>{t("assistant.stop_reading", "Stop Audio")}</span>
                             </>
                           ) : (
                             <>
-                              <Volume2 size={12} />
-                              <span>{t("assistant.read_aloud", "Read Aloud")}</span>
+                              <Volume2 size={15} />
+                              <span>{t("assistant.read_aloud", "Read Aloud (Voice)")}</span>
                             </>
                           )}
                         </button>
@@ -599,14 +624,14 @@ export default function AssistantPage() {
                 }`}
               />
 
-              {/* Voice Input Microphone Button */}
+              {/* Large Voice Input Microphone Button */}
               <button
                 type="button"
                 onClick={toggleVoiceInput}
-                className={`p-3 rounded-xl border transition-all flex items-center justify-center ${
+                className={`p-3.5 sm:p-4 rounded-2xl border-2 transition-all flex items-center justify-center shadow-xs cursor-pointer ${
                   isListening
-                    ? "bg-red-600 text-white border-red-600 animate-pulse"
-                    : "bg-[#EEF6EC] text-[#2E7D32] border-[#DCE8DC] hover:bg-[#E0EFE0]"
+                    ? "bg-red-600 text-white border-red-600 animate-pulse scale-105 ring-4 ring-red-200"
+                    : "bg-[#EEF6EC] text-[#1B5E20] border-[#B8D8B8] hover:bg-[#D8ECD8] hover:scale-105"
                 }`}
                 title={
                   isListening
@@ -618,7 +643,7 @@ export default function AssistantPage() {
                     : "Speak your question"
                 }
               >
-                {isListening ? <MicOff className="w-5 h-5" /> : <Mic className="w-5 h-5" />}
+                {isListening ? <MicOff className="w-6 h-6 text-white" /> : <Mic className="w-6 h-6 text-[#1B5E20]" />}
               </button>
 
               <button

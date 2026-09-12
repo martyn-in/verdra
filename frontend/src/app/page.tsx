@@ -1119,9 +1119,13 @@ function ScanPage({
       const detectedObj = payload?.detected_object;
       const status = payload?.status;
 
-      if (status === "INVALID_INPUT" || (detectedObj && detectedObj !== "crop leaf")) {
+      if (status === "UNSUPPORTED_CROP" || payload?.reason === "unsupported_crop" || payload?.error_code === "UNSUPPORTED_CROP") {
+        const plantDisplay = payload?.detected_plant || payload?.detected_object || "unsupported crop";
+        const formatted = plantDisplay.toLowerCase().includes("leaf") ? plantDisplay : `${plantDisplay} leaf`;
+        setError(`Detected: ${formatted.charAt(0).toUpperCase() + formatted.slice(1)}.\nThis crop is not currently supported.`);
+      } else if (status === "INVALID_INPUT" || (detectedObj && detectedObj !== "crop leaf")) {
         const formatted = detectedObj ? detectedObj.charAt(0).toUpperCase() + detectedObj.slice(1) : "Non-Leaf Object";
-        setError(`Detected Image: ${formatted}. This image is not a crop leaf. Please upload a clear crop leaf image.`);
+        setError(`Detected: ${formatted}.\nVerdra analyzes crop leaves only. Please upload a crop leaf image.`);
       } else if (msg === "Backend connection blocked.") {
         setError("Backend connection blocked.");
       } else if (msg === "Prediction endpoint not found.") {
