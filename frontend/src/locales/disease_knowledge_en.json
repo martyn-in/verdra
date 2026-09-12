@@ -1,0 +1,136 @@
+{
+  "Tomato Early Blight": {
+    "canonical_name": "Tomato Early Blight",
+    "pathogen": "Alternaria solani (Fungus)",
+    "local_summary": "Early blight is characterized by dark brown concentric ring lesions ('target-spots') primarily on older lower leaves.",
+    "immediate_actions": [
+      "Remove and safely dispose of severely spotted lower leaves to reduce spore inoculation.",
+      "Apply protective copper-based or chlorothalonil fungicide under dry conditions.",
+      "Avoid overhead sprinkler irrigation; apply water strictly at soil base."
+    ],
+    "preventive_actions": [
+      "Implement a 3-year crop rotation avoiding Solanaceae family members.",
+      "Ensure minimum 60cm row spacing to promote air circulation and quick leaf drying.",
+      "Apply organic straw mulch around plant base to prevent soil splash."
+    ],
+    "monitoring_advice": [
+      "Inspect lower leaves every 48-72 hours after warm rain or morning dew.",
+      "Re-scan symptomatic foliage within 3-5 days to measure lesion margin stability."
+    ]
+  },
+  "Tomato Late Blight": {
+    "canonical_name": "Tomato Late Blight",
+    "pathogen": "Phytophthora infestans (Oomycete)",
+    "local_summary": "Late blight is a destructive water-mold disease producing irregular pale green water-soaked lesions that rapidly darken, accompanied by white mold under leaves during humid weather.",
+    "immediate_actions": [
+      "Immediately rogue and bury or bag infected foliage to halt rapid airborne zoospore dispersal.",
+      "Apply targeted systemic oomycete-active fungicide (e.g. Metalaxyl, Mancozeb) across entire field block.",
+      "Cease overhead wetting immediately."
+    ],
+    "preventive_actions": [
+      "Plant certified disease-free transplants and blight-resistant cultivars.",
+      "Destroy volunteer tomato and potato cull piles within 500m of the field.",
+      "Ensure well-drained raised beds."
+    ],
+    "monitoring_advice": [
+      "Daily scouting required under cool, overcast, high-humidity (>85%) weather conditions.",
+      "Rescan every 24-48 hours until spread is arrested."
+    ]
+  },
+  "Tomato Bacterial Spot": {
+    "canonical_name": "Tomato Bacterial Spot",
+    "pathogen": "Xanthomonas perforans / euvesicatoria (Bacteria)",
+    "local_summary": "Bacterial spot causes small, water-soaked dark circular spots (1-3mm) often with a chlorotic yellow halo. Lesions turn brown-black and dry out.",
+    "immediate_actions": [
+      "Apply fixed copper bactericide paired with mancozeb to overcome copper tolerance.",
+      "Do NOT work in fields while foliage is wet from dew or rain to avoid mechanical spreading.",
+      "Sanitize pruning shears in 10% bleach solution between plant rows."
+    ],
+    "preventive_actions": [
+      "Use certified hot-water-treated seed.",
+      "Rotate out of solanaceous crops for at least 2 seasons.",
+      "Incorporate drip irrigation and avoid overhead sprinkling."
+    ],
+    "monitoring_advice": [
+      "Monitor newly emerged vegetative flushes twice weekly during warm rainy periods."
+    ]
+  },
+  "Tomato healthy": {
+    "canonical_name": "Tomato Healthy",
+    "pathogen": "None (Healthy Foliage)",
+    "local_summary": "Leaf tissue exhibits vigorous chlorophyll density, uniform vein structure, and no visible lesions or parasitic chlorosis.",
+    "immediate_actions": [
+      "Maintain routine balanced fertilization with adequate potassium and calcium.",
+      "Continue standard irrigation regimen based on evapotranspiration rates."
+    ],
+    "preventive_actions": [
+      "Scout crop canopy weekly to preserve disease-free status.",
+      "Maintain weed-free field borders to eliminate insect vector reservoirs."
+    ],
+    "monitoring_advice": [
+      "Routine bi-weekly monitoring scan."
+    ]
+  },
+  "Potato Early Blight": {
+    "canonical_name": "Potato Early Blight",
+    "pathogen": "Alternaria solani (Fungus)",
+    "local_summary": "Foliar target-board lesions characterized by concentric rings on potato leaflets, causing premature senescence and tuber bulking reduction.",
+    "immediate_actions": [
+      "Apply protective foliar fungicide (Mancozeb or Azoxystrobin) before canopy closure.",
+      "Maintain soil moisture to reduce physiological plant stress."
+    ],
+    "preventive_actions": [
+      "Ensure proper nitrogen nutrition; stressed, senescing plants are most susceptible.",
+      "Destroy post-harvest vine residues."
+    ],
+    "monitoring_advice": [
+      "Scout mid-to-lower canopy every 5 days after tuber initiation."
+    ]
+  },
+  "Potato Late Blight": {
+    "canonical_name": "Potato Late Blight",
+    "pathogen": "Phytophthora infestans (Oomycete)",
+    "local_summary": "Rapidly expanding necrotic water-soaked lesions on potato leaves with white sporulating margins under humid microclimates.",
+    "immediate_actions": [
+      "Apply curative systemic fungicide immediately.",
+      "Do not harvest infected tubers until vines have been completely desiccant-killed for 14 days."
+    ],
+    "preventive_actions": [
+      "Plant certified seed tubers.",
+      "Hill up soil generously around stems to create a protective barrier against spores washing down to tubers."
+    ],
+    "monitoring_advice": [
+      "Daily inspection during high-risk cool rainy spells."
+    ]
+  },
+  "Potato healthy": {
+    "canonical_name": "Potato Healthy",
+    "pathogen": "None (Healthy Foliage)",
+    "local_summary": "Vigorous green potato foliage with intact cuticle and optimal photosynthetic health.",
+    "immediate_actions": [
+      "Maintain regular pest scouting and balanced hilling schedule."
+    ],
+    "preventive_actions": [
+      "Monitor soil moisture and maintain nutrient balance."
+    ],
+    "monitoring_advice": [
+      "Inspect bi-weekly."
+    ]
+  },
+  "Pepper bell Bacterial spot": {
+    "canonical_name": "Pepper Bell Bacterial Spot",
+    "pathogen": "Xanthomonas campestris pv. vesicatoria",
+    "local_summary": "Causes small, dark, water-soaked, blistering lesions on bell pepper leaves and fruit, causing severe defoliation in warm wet climates.",
+    "immediate_actions": [
+      "Apply copper hydroxide plus mancozeb bactericide spray.",
+      "Never cultivate or harvest plants while foliage is wet."
+    ],
+    "preventive_actions": [
+      "Plant resistant hybrid cultivars.",
+      "Practice clean field sanitation and drip irrigation."
+    ],
+    "monitoring_advice": [
+      "Examine leaf undersides every 4-6 days."
+    ]
+  }
+}

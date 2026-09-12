@@ -54,3 +54,5 @@ cloudflared.tgz
 .vscode/
 .idea/
 .vercel
+*.db
+backend/data/*.db

@@ -21,6 +21,8 @@ import {
   LogOut,
 } from "lucide-react";
 import { supabase } from "@/lib/supabase";
+import LanguageSelector from "@/components/common/LanguageSelector";
+import OfflineQueueBadge from "@/components/common/OfflineQueueBadge";
 
 interface NavItem {
   href: string;
@@ -119,6 +121,15 @@ export default function VerdraSidebar({ children }: { children?: React.ReactNode
           </nav>
         </div>
 
+        {/* Language & Offline Controls */}
+        <div className="px-3 py-2 border-t border-[#DCE8DC]/70 space-y-2">
+          <OfflineQueueBadge />
+          <div>
+            <span className="text-[10px] font-bold uppercase tracking-wider text-[#66736B] block mb-1 font-mono">Language / భాష / भाषा</span>
+            <LanguageSelector />
+          </div>
+        </div>
+
         {/* Bottom Navigation & Profile */}
         <div className="p-3 border-t border-[#DCE8DC]/70 space-y-1">
           {bottomNav.map((item) => {
@@ -183,6 +194,8 @@ export default function VerdraSidebar({ children }: { children?: React.ReactNode
           </span>
         </Link>
         <div className="flex items-center gap-2">
+          <OfflineQueueBadge />
+          <LanguageSelector />
           <Link
             href="/scan"
             className="btn-forest !px-3 !py-1.5 !text-xs !rounded-lg"

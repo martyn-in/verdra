@@ -23,6 +23,7 @@ from routes.weather import router as weather_router
 from routes.diseases import router as diseases_router
 from routes.report import router as report_router
 from routes.model import router as model_router
+from routes.advanced_routes import router as advanced_router
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -85,6 +86,7 @@ app.include_router(weather_router, prefix="/api")
 app.include_router(diseases_router, prefix="/api")
 app.include_router(report_router, prefix="/api")
 app.include_router(model_router, prefix="/api/model")
+app.include_router(advanced_router, prefix="/api")
 
 
 @app.get("/health")

@@ -9,6 +9,13 @@ import logging
 
 logger = logging.getLogger(__name__)
 
+try:
+    import cv2
+    HAS_CV2 = True
+except ImportError:
+    cv2 = None
+    HAS_CV2 = False
+
 
 def check_image_quality(image_bytes: bytes) -> dict:
     """
@@ -40,13 +47,17 @@ def check_image_quality(image_bytes: bytes) -> dict:
         issues.append("Image resolution is low. Higher resolution may improve accuracy.")
         score -= 15
 
-    # 2. Blur detection (Laplacian variance)
-    gray = np.mean(img_array, axis=2)
-    # Approximate Laplacian via finite differences
-    laplacian_h = gray[:-2, 1:-1] + gray[2:, 1:-1] - 2 * gray[1:-1, 1:-1]
-    laplacian_v = gray[1:-1, :-2] + gray[1:-1, 2:] - 2 * gray[1:-1, 1:-1]
-    laplacian = laplacian_h + laplacian_v
-    blur_score = np.var(laplacian)
+    # 2. Blur detection (Laplacian variance via OpenCV or high-performance fallback)
+    if HAS_CV2 and cv2 is not None:
+        gray_u8 = np.dot(img_array[..., :3], [0.2989, 0.5870, 0.1140]).astype(np.uint8)
+        blur_score = float(cv2.Laplacian(gray_u8, cv2.CV_64F).var())
+    else:
+        gray = np.mean(img_array, axis=2)
+        # Approximate Laplacian via finite differences
+        laplacian_h = gray[:-2, 1:-1] + gray[2:, 1:-1] - 2 * gray[1:-1, 1:-1]
+        laplacian_v = gray[1:-1, :-2] + gray[1:-1, 2:] - 2 * gray[1:-1, 1:-1]
+        laplacian = laplacian_h + laplacian_v
+        blur_score = float(np.var(laplacian))
 
     if blur_score < 50:
         issues.append("Image appears blurry. Please capture a sharper photo.")

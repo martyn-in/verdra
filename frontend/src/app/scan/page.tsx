@@ -16,10 +16,16 @@ import {
   ShieldCheck,
   FileCheck,
   ChevronDown,
+  Sparkles,
+  Layers,
+  Scan,
 } from "lucide-react";
 import VerdraSidebar from "@/components/layout/VerdraSidebar";
 import { api } from "@/lib/api";
 import { compressImage } from "@/lib/utils";
+import OpenCvCameraScanner, { OpenCvScanResult } from "@/components/scan/OpenCvCameraScanner";
+import LeafCaptureOverlay from "@/components/scan/LeafCaptureOverlay";
+import BatchScanSection from "@/components/scan/BatchScanSection";
 
 const cropOptions = [
   { value: "auto", label: "Auto Detect (Recommended)" },
@@ -58,6 +64,32 @@ export default function ScanPage() {
   const [currentStepIndex, setCurrentStepIndex] = useState(0);
   const [error, setError] = useState("");
   const [dragActive, setDragActive] = useState(false);
+  const [scannerOpen, setScannerOpen] = useState(false);
+  const [scanMode, setScanMode] = useState<"single" | "batch">("single");
+  const [captureOverlayOpen, setCaptureOverlayOpen] = useState(false);
+  const [openCvMetrics, setOpenCvMetrics] = useState<{
+    sharpness: number;
+    foliarCoverage: number;
+    isSharp: boolean;
+  } | null>(null);
+
+  const handleLeafCaptured = useCallback((capturedFile: File, previewUrl: string) => {
+    setFile(capturedFile);
+    setPreview(previewUrl);
+    setCaptureOverlayOpen(false);
+    setError("");
+  }, []);
+
+  const handleScanCapture = useCallback((res: OpenCvScanResult) => {
+    setFile(res.file);
+    setPreview(res.enhancedUrl || res.previewUrl);
+    setOpenCvMetrics({
+      sharpness: res.sharpnessScore,
+      foliarCoverage: res.foliarCoverage,
+      isSharp: res.isSharp,
+    });
+    setError("");
+  }, []);
 
   const handleFile = useCallback((f: File) => {
     setError("");
@@ -103,6 +135,7 @@ export default function ScanPage() {
   function clearImage() {
     setFile(null);
     setPreview(null);
+    setOpenCvMetrics(null);
     setError("");
     if (fileInputRef.current) fileInputRef.current.value = "";
     if (cameraInputRef.current) cameraInputRef.current.value = "";
@@ -304,108 +337,164 @@ export default function ScanPage() {
           </div>
         )}
 
-        {/* ===== MAIN UPLOAD CARD OR PROGRESS SEQUENCE ===== */}
-        {analyzing ? (
-          /* Requirement 8: ANALYSIS LOADING EXPERIENCE */
-          <div className="verdra-glass p-8 sm:p-12 shadow-xl text-center">
-            <div className="w-16 h-16 rounded-2xl bg-[#EEF6EC] border border-[#DCE8DC] flex items-center justify-center text-[#2E7D32] mx-auto mb-6">
-              <ScanLine className="w-8 h-8 animate-pulse" />
-            </div>
-
-            <h2 className="text-2xl font-bold text-[#12372A] mb-2 font-heading">
-              Analyzing Leaf Specimen
-            </h2>
-            <p className="text-sm text-[#66736B] mb-8 max-w-md mx-auto">
-              Please wait while Verdra processes the foliar tissue through our computer vision and environmental spread engines.
-            </p>
-
-            {/* 6-Step Visual Progress Sequence */}
-            <div className="max-w-md mx-auto space-y-3.5 text-left">
-              {PROGRESS_STEPS.map((item, idx) => {
-                const isCompleted = idx < currentStepIndex;
-                const isCurrent = idx === currentStepIndex;
-                return (
-                  <div
-                    key={item.step}
-                    className={`p-3.5 rounded-xl border transition-all flex items-start gap-3.5 ${
-                      isCompleted
-                        ? "bg-[#EEF6EC] border-[#DCE8DC] text-[#12372A]"
-                        : isCurrent
-                        ? "bg-white border-[#2E7D32] shadow-sm text-[#12372A]"
-                        : "bg-[#F8FAF6] border-[#DCE8DC]/60 text-[#66736B] opacity-50"
-                    }`}
-                  >
-                    <div className="mt-0.5">
-                      {isCompleted ? (
-                        <CheckCircle2 className="w-5 h-5 text-[#2E7D32]" />
-                      ) : isCurrent ? (
-                        <div className="w-5 h-5 rounded-full border-2 border-[#2E7D32] border-t-transparent animate-spin" />
-                      ) : (
-                        <div className="w-5 h-5 rounded-full border border-[#DCE8DC] flex items-center justify-center text-[10px] font-mono text-[#66736B]">
-                          {item.step}
-                        </div>
-                      )}
-                    </div>
-                    <div>
-                      <div className="text-sm font-bold leading-tight">
-                        {item.title}
-                      </div>
-                      <div className="text-xs text-[#66736B] mt-0.5">
-                        {item.desc}
-                      </div>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
+        {/* ===== MODE SWITCHER: SINGLE | BATCH ===== */}
+        <div className="flex justify-center">
+          <div className="inline-flex p-1 rounded-2xl bg-[#EEF6EC] border border-[#DCE8DC] shadow-xs">
+            <button
+              type="button"
+              onClick={() => setScanMode("single")}
+              className={`px-5 py-2.5 rounded-xl text-xs sm:text-sm font-bold flex items-center gap-2 transition-all ${
+                scanMode === "single"
+                  ? "bg-[#12372A] text-white shadow-sm"
+                  : "text-[#66736B] hover:text-[#12372A]"
+              }`}
+            >
+              <Scan className="w-4 h-4" />
+              <span>Single Scan</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setScanMode("batch")}
+              className={`px-5 py-2.5 rounded-xl text-xs sm:text-sm font-bold flex items-center gap-2 transition-all ${
+                scanMode === "batch"
+                  ? "bg-[#12372A] text-white shadow-sm"
+                  : "text-[#66736B] hover:text-[#12372A]"
+              }`}
+            >
+              <Layers className="w-4 h-4" />
+              <span>Batch Scan (2–10 Leaves)</span>
+            </button>
           </div>
+        </div>
+
+        {scanMode === "batch" ? (
+          <BatchScanSection />
         ) : (
-          /* Requirement 7: SCAN UPLOAD INTERFACE */
-          <div className="space-y-6">
-            
-            {/* Upload Box */}
-            {!preview ? (
-              <div
-                onDragEnter={() => setDragActive(true)}
-                onDragOver={(e) => { e.preventDefault(); setDragActive(true); }}
-                onDragLeave={() => setDragActive(false)}
-                onDrop={handleDrop}
-                className={`verdra-glass p-8 sm:p-14 text-center border-2 border-dashed transition-all cursor-pointer shadow-md ${
-                  dragActive
-                    ? "border-[#2E7D32] bg-[#EEF6EC]/80"
-                    : "border-[#DCE8DC] hover:border-[#52B788]"
-                }`}
-                onClick={() => fileInputRef.current?.click()}
-              >
-                <div className="w-16 h-16 rounded-2xl bg-[#EEF6EC] border border-[#DCE8DC] flex items-center justify-center text-[#2E7D32] mx-auto mb-5 shadow-xs">
-                  <Upload className="w-7 h-7" />
+          <>
+            {/* ===== MAIN UPLOAD CARD OR PROGRESS SEQUENCE ===== */}
+            {analyzing ? (
+              /* Requirement 8: ANALYSIS LOADING EXPERIENCE */
+              <div className="verdra-glass p-8 sm:p-12 shadow-xl text-center">
+                <div className="w-16 h-16 rounded-2xl bg-[#EEF6EC] border border-[#DCE8DC] flex items-center justify-center text-[#2E7D32] mx-auto mb-6">
+                  <ScanLine className="w-8 h-8 animate-pulse" />
                 </div>
 
-                <h3 className="text-xl font-bold text-[#12372A] mb-2 font-heading">
-                  Drag &amp; Drop leaf image here
-                </h3>
-                <p className="text-sm text-[#66736B] max-w-sm mx-auto mb-6">
-                  Supports JPG, JPEG, PNG, and WEBP files up to 10 MB.
+                <h2 className="text-2xl font-bold text-[#12372A] mb-2 font-heading">
+                  Analyzing Leaf Specimen
+                </h2>
+                <p className="text-sm text-[#66736B] mb-8 max-w-md mx-auto">
+                  Please wait while Verdra processes the foliar tissue through our computer vision and environmental spread engines.
                 </p>
 
-                {/* Primary Browse and Camera Buttons */}
-                <div className="flex flex-wrap items-center justify-center gap-3" onClick={(e) => e.stopPropagation()}>
-                  <button
-                    type="button"
+                {/* 6-Step Visual Progress Sequence */}
+                <div className="max-w-md mx-auto space-y-3.5 text-left">
+                  {PROGRESS_STEPS.map((item, idx) => {
+                    const isCompleted = idx < currentStepIndex;
+                    const isCurrent = idx === currentStepIndex;
+                    return (
+                      <div
+                        key={item.step}
+                        className={`p-3.5 rounded-xl border transition-all flex items-start gap-3.5 ${
+                          isCompleted
+                            ? "bg-[#EEF6EC] border-[#DCE8DC] text-[#12372A]"
+                            : isCurrent
+                            ? "bg-white border-[#2E7D32] shadow-sm text-[#12372A]"
+                            : "bg-[#F8FAF6] border-[#DCE8DC]/60 text-[#66736B] opacity-50"
+                        }`}
+                      >
+                        <div className="mt-0.5">
+                          {isCompleted ? (
+                            <CheckCircle2 className="w-5 h-5 text-[#2E7D32]" />
+                          ) : isCurrent ? (
+                            <div className="w-5 h-5 rounded-full border-2 border-[#2E7D32] border-t-transparent animate-spin" />
+                          ) : (
+                            <div className="w-5 h-5 rounded-full border border-[#DCE8DC] flex items-center justify-center text-[10px] font-mono text-[#66736B]">
+                              {item.step}
+                            </div>
+                          )}
+                        </div>
+                        <div>
+                          <div className="text-sm font-bold leading-tight">
+                            {item.title}
+                          </div>
+                          <div className="text-xs text-[#66736B] mt-0.5">
+                            {item.desc}
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            ) : (
+              /* Requirement 7: SCAN UPLOAD INTERFACE */
+              <div className="space-y-6">
+                
+                {/* Upload Box */}
+                {!preview ? (
+                  <div
+                    onDragEnter={() => setDragActive(true)}
+                    onDragOver={(e) => { e.preventDefault(); setDragActive(true); }}
+                    onDragLeave={() => setDragActive(false)}
+                    onDrop={handleDrop}
+                    className={`verdra-glass p-8 sm:p-14 text-center border-2 border-dashed transition-all cursor-pointer shadow-md ${
+                      dragActive
+                        ? "border-[#2E7D32] bg-[#EEF6EC]/80"
+                        : "border-[#DCE8DC] hover:border-[#52B788]"
+                    }`}
                     onClick={() => fileInputRef.current?.click()}
-                    className="btn-forest !px-6 !py-3 !text-sm flex items-center gap-2"
                   >
-                    <Upload className="w-4 h-4" />
-                    <span>Browse Files</span>
-                  </button>
+                    <div className="w-16 h-16 rounded-2xl bg-[#EEF6EC] border border-[#DCE8DC] flex items-center justify-center text-[#2E7D32] mx-auto mb-5 shadow-xs">
+                      <Upload className="w-7 h-7" />
+                    </div>
 
+                    <h3 className="text-xl font-bold text-[#12372A] mb-2 font-heading">
+                      Drag &amp; Drop leaf image here
+                    </h3>
+                    <p className="text-sm text-[#66736B] max-w-sm mx-auto mb-6">
+                      Supports JPG, JPEG, PNG, and WEBP files up to 10 MB.
+                    </p>
+
+                    {/* Primary Camera and File Browse Buttons */}
+                    <div className="flex flex-col sm:flex-row items-center justify-center gap-3" onClick={(e) => e.stopPropagation()}>
+                      <button
+                        type="button"
+                        onClick={() => setCaptureOverlayOpen(true)}
+                        className="btn-forest !px-6 !py-3 !text-sm flex items-center gap-2 shadow-lg shadow-[#2E7D32]/25 hover:scale-102 transition-transform"
+                      >
+                        <Camera className="w-4 h-4 text-[#85E3B3]" />
+                        <span>Capture Camera</span>
+                        <span className="text-[10px] bg-white/20 px-1.5 py-0.5 rounded font-mono font-bold">
+                          GUIDE
+                        </span>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => setScannerOpen(true)}
+                        className="btn-outline !px-5 !py-3 !text-sm flex items-center gap-2"
+                      >
+                        <Sparkles className="w-4 h-4 text-[#2E7D32]" />
+                        <span>OpenCV Scanner</span>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => fileInputRef.current?.click()}
+                        className="btn-outline !px-5 !py-3 !text-sm flex items-center gap-2"
+                      >
+                        <Upload className="w-4 h-4 text-[#2E7D32]" />
+                        <span>Browse Files</span>
+                      </button>
+                    </div>
+
+                <div className="mt-4" onClick={(e) => e.stopPropagation()}>
                   <button
                     type="button"
                     onClick={() => cameraInputRef.current?.click()}
-                    className="btn-outline !px-6 !py-3 !text-sm flex items-center gap-2"
+                    className="text-xs text-[#66736B] hover:text-[#12372A] underline flex items-center justify-center gap-1 mx-auto"
                   >
-                    <Camera className="w-4 h-4 text-[#2E7D32]" />
-                    <span>Take Photo</span>
+                    <span>Or use standard system camera</span>
                   </button>
                 </div>
 
@@ -454,6 +543,14 @@ export default function ScanPage() {
                     alt="Leaf specimen preview"
                     className="w-full h-full object-contain"
                   />
+                  {openCvMetrics && (
+                    <div className="absolute top-3 left-3 px-3 py-1.5 rounded-xl bg-black/75 border border-[#52B788] text-white text-xs font-mono backdrop-blur-md flex items-center gap-2">
+                      <Sparkles className="w-3.5 h-3.5 text-[#52B788]" />
+                      <span>OpenCV Focus: {openCvMetrics.sharpness}%</span>
+                      <span className="text-[#8EA396]">•</span>
+                      <span>Foliage: {openCvMetrics.foliarCoverage}%</span>
+                    </div>
+                  )}
                 </div>
 
                 {/* Crop Selection */}
@@ -527,8 +624,24 @@ export default function ScanPage() {
               </div>
             </div>
 
-          </div>
-        )}
+            </div>
+          )}
+        </>
+      )}
+
+        {/* OpenCV Live Camera Scanner Modal */}
+        <OpenCvCameraScanner
+          isOpen={scannerOpen}
+          onClose={() => setScannerOpen(false)}
+          onCapture={handleScanCapture}
+        />
+
+        {/* Leaf Framing & Image Quality Live Overlay */}
+        <LeafCaptureOverlay
+          isOpen={captureOverlayOpen}
+          onClose={() => setCaptureOverlayOpen(false)}
+          onCapture={handleLeafCaptured}
+        />
 
       </div>
     </VerdraSidebar>

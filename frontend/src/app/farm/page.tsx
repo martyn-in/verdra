@@ -23,6 +23,8 @@ import Link from "next/link";
 import VerdraSidebar from "@/components/layout/VerdraSidebar";
 import { api } from "@/lib/api";
 import { WeatherData } from "@/types";
+import FieldHotspotMap from "@/components/results/FieldHotspotMap";
+import NearbyRiskAlerts from "@/components/results/NearbyRiskAlerts";
 
 interface FarmProfile {
   id: string;
@@ -419,6 +421,12 @@ export default function FarmHealthPage() {
             )}
           </div>
         </div>
+
+        {/* Nearby-Risk Alerts (Triggered from >= 3 matching scans in 72h) */}
+        <NearbyRiskAlerts fieldId={selectedFarmId} />
+
+        {/* Real Field Health Hotspot Map */}
+        <FieldHotspotMap fieldId={selectedFarmId} />
 
         {/* Modal: Register New Farm */}
         <AnimatePresence>

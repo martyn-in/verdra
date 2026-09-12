@@ -22,12 +22,17 @@ import {
   Minus,
   GitCompareArrows,
   Clock,
+  Share2,
 } from "lucide-react";
 import VerdraSidebar from "@/components/layout/VerdraSidebar";
 import { CompleteDiagnosis } from "@/types";
 import { formatDate, formatDiseaseName, formatConfidence } from "@/lib/utils";
 import { api } from "@/lib/api";
 import { supabase, saveScan } from "@/lib/supabase";
+import VoiceReadout from "@/components/results/VoiceReadout";
+import ExpertShareModal from "@/components/results/ExpertShareModal";
+import DiseaseProgressionTimeline from "@/components/results/DiseaseProgressionTimeline";
+import NearbyRiskAlerts from "@/components/results/NearbyRiskAlerts";
 
 interface ResultViewProps {
   diagnosisData?: CompleteDiagnosis | null;
@@ -42,13 +47,55 @@ export default function VerdraResultView({ diagnosisData, scanId }: ResultViewPr
   const [saving, setSaving] = useState(false);
   const [savedSuccess, setSavedSuccess] = useState(false);
   const [exporting, setExporting] = useState(false);
+  const [shareModalOpen, setShareModalOpen] = useState(false);
+
+  const [loadingError, setLoadingError] = useState(false);
 
   useEffect(() => {
     if (diagnosisData) { setDiagnosis(diagnosisData); return; }
+    
     if (scanId) {
+      // 1. Direct key
       const stored = localStorage.getItem(`verdra_diagnosis_${scanId}`);
-      if (stored) { try { setDiagnosis(JSON.parse(stored)); return; } catch {} }
+      if (stored) {
+        try { setDiagnosis(JSON.parse(stored)); return; } catch {}
+      }
+
+      // 2. Recent scans list
+      try {
+        const recent = JSON.parse(localStorage.getItem("verdra_recent_scans") || "[]");
+        const found = recent.find((s: any) => s.id === scanId);
+        if (found) { setDiagnosis(found); return; }
+      } catch {}
+
+      // 3. SPA history list
+      try {
+        const hist = JSON.parse(localStorage.getItem("verdra-real-scan-history") || "[]");
+        const found = hist.find((s: any) => s.id === scanId);
+        if (found) { setDiagnosis(found); return; }
+      } catch {}
+
+      // 4. Fetch from backend API
+      api.getScan(scanId)
+        .then((remoteScan) => {
+          if (remoteScan) {
+            setDiagnosis(remoteScan);
+            try {
+              localStorage.setItem(`verdra_diagnosis_${scanId}`, JSON.stringify(remoteScan));
+            } catch {}
+          }
+        })
+        .catch(() => {
+          // Fall back to current diagnosis if available
+          const current = sessionStorage.getItem("agri_diagnosis") || localStorage.getItem("verdra_current_diagnosis");
+          if (current) {
+            try { setDiagnosis(JSON.parse(current)); return; } catch {}
+          }
+          setLoadingError(true);
+        });
+      return;
     }
+
     const current = sessionStorage.getItem("agri_diagnosis") || localStorage.getItem("verdra_current_diagnosis");
     if (current) { try { setDiagnosis(JSON.parse(current)); return; } catch {} }
     setDiagnosis(null);
@@ -76,24 +123,95 @@ export default function VerdraResultView({ diagnosisData, scanId }: ResultViewPr
   if (!diagnosis) {
     return (
       <VerdraSidebar>
-        <div className="p-12 text-center">
-          <div className="w-12 h-12 rounded-full border-2 border-[#2E7D32] border-t-transparent animate-spin mx-auto mb-4" />
-          <p className="text-sm font-semibold text-[#66736B]">Loading crop analysis...</p>
+        <div className="p-12 text-center max-w-md mx-auto">
+          {loadingError ? (
+            <div className="verdra-glass p-8 shadow-md space-y-4">
+              <div className="w-12 h-12 rounded-xl bg-[#FEF2F2] border border-[#FECACA] flex items-center justify-center text-[#DC2626] mx-auto">
+                <AlertTriangle className="w-6 h-6" />
+              </div>
+              <h3 className="text-lg font-bold text-[#12372A]">Scan Details Unavailable</h3>
+              <p className="text-xs text-[#66736B] leading-relaxed">
+                The requested scan record could not be found or has expired from this local session.
+              </p>
+              <div className="pt-2 flex justify-center gap-3">
+                <Link href="/scan" className="btn-forest !py-2 !px-4 !text-xs">
+                  Scan New Crop
+                </Link>
+                <Link href="/history" className="btn-outline !py-2 !px-4 !text-xs">
+                  View History
+                </Link>
+              </div>
+            </div>
+          ) : (
+            <>
+              <div className="w-12 h-12 rounded-full border-2 border-[#2E7D32] border-t-transparent animate-spin mx-auto mb-4" />
+              <p className="text-sm font-semibold text-[#66736B]">Loading crop analysis...</p>
+            </>
+          )}
         </div>
       </VerdraSidebar>
     );
   }
 
   const isUncertain = diagnosis.status === "UNCERTAIN";
-  const isHealthy = !isUncertain && (diagnosis.is_healthy || (typeof diagnosis.prediction === "string" && diagnosis.prediction.toLowerCase().includes("healthy")));
-  const displayCrop = diagnosis.crop || "Unknown";
-  const displayDisease = typeof diagnosis.prediction === "string" ? diagnosis.prediction : diagnosis.disease || "Crop Disease";
+  const isHealthy =
+    !isUncertain &&
+    (Boolean(diagnosis.is_healthy) ||
+      (typeof diagnosis.prediction === "string" &&
+        diagnosis.prediction.toLowerCase().includes("healthy")) ||
+      (typeof diagnosis.disease === "string" &&
+        diagnosis.disease.toLowerCase().includes("healthy")));
+  const displayCrop = diagnosis.crop || diagnosis.crop_name || "Tomato";
+  const displayDisease =
+    typeof diagnosis.prediction === "string"
+      ? diagnosis.prediction
+      : diagnosis.disease || "Crop Disease";
   const confidencePercent = formatConfidence(diagnosis.confidence);
-  const severityLevel = diagnosis.severity?.level || diagnosis.severity?.severity || (isHealthy ? "None" : "Moderate");
-  const affectedArea = diagnosis.severity?.percentage != null ? `${diagnosis.severity.percentage}%` : diagnosis.severity?.infected_percentage ? `${diagnosis.severity.infected_percentage}%` : isHealthy ? "0%" : "N/A";
-  const spreadRisk = diagnosis.risk?.level || (isHealthy ? "Low" : "Moderate");
-  const gradcamOverlay = diagnosis.gradcam?.overlay || diagnosis.gradcam?.overlay_base64 || diagnosis.gradcam_url || null;
-  const hasRealGradcam = gradcamOverlay && (gradcamOverlay.startsWith("data:") || gradcamOverlay.startsWith("http"));
+  const severityLevel =
+    diagnosis.severity?.level ||
+    diagnosis.severity?.severity ||
+    (typeof diagnosis.severity === "string"
+      ? diagnosis.severity
+      : isHealthy
+      ? "None"
+      : "Moderate");
+  const affectedPct =
+    diagnosis.severity?.percentage != null
+      ? diagnosis.severity.percentage
+      : diagnosis.severity?.infected_percentage != null
+      ? diagnosis.severity.infected_percentage
+      : diagnosis.affected_percentage != null
+      ? diagnosis.affected_percentage
+      : null;
+  const affectedArea = affectedPct != null ? `${affectedPct}%` : isHealthy ? "0%" : "N/A";
+  const spreadRisk = diagnosis.risk?.level || diagnosis.risk_level || (isHealthy ? "Low" : "Moderate");
+  const gradcamOverlay =
+    diagnosis.gradcam?.overlay ||
+    diagnosis.gradcam?.overlay_base64 ||
+    diagnosis.gradcam_url ||
+    null;
+  const hasRealGradcam =
+    gradcamOverlay &&
+    (gradcamOverlay.startsWith("data:") || gradcamOverlay.startsWith("http"));
+  const displayImage =
+    diagnosis.imageUrl ||
+    diagnosis.image_url ||
+    "/sample_images/sample_tomato_late_blight.jpg";
+  const displayDate =
+    diagnosis.scanDate ||
+    diagnosis.created_at ||
+    diagnosis.timestamp ||
+    new Date().toISOString();
+  const displayTag = diagnosis.fieldTag || diagnosis.field_tag || "";
+  const topPredictionsList =
+    diagnosis.top_predictions && diagnosis.top_predictions.length > 0
+      ? diagnosis.top_predictions
+      : diagnosis.topPredictions && diagnosis.topPredictions.length > 0
+      ? diagnosis.topPredictions.map((tp: any) => ({
+          class_name: tp.className || tp.class_name,
+          confidence: tp.confidence,
+        }))
+      : [];
 
   async function handleSaveScan() {
     if (!diagnosis) return;
@@ -204,8 +322,8 @@ export default function VerdraResultView({ diagnosisData, scanId }: ResultViewPr
             <p className="text-xs text-[#66736B] mt-1 flex items-center gap-2 font-mono flex-wrap">
               <span>Host Genus: <strong className="text-[#12372A]">{displayCrop}</strong></span>
               <span>·</span>
-              <span>Analyzed: {formatDate(diagnosis.scanDate || diagnosis.created_at)}</span>
-              {diagnosis.fieldTag && (<><span>·</span><span>Tag: <strong className="text-[#12372A]">{diagnosis.fieldTag}</strong></span></>)}
+              <span>Analyzed: {formatDate(displayDate)}</span>
+              {displayTag && (<><span>·</span><span>Tag: <strong className="text-[#12372A]">{displayTag}</strong></span></>)}
             </p>
           </div>
           <Link href="/scan" className="btn-outline !py-2 !px-4 !text-xs flex items-center gap-1.5">
@@ -227,7 +345,7 @@ export default function VerdraResultView({ diagnosisData, scanId }: ResultViewPr
               </div>
             </div>
             <div className="relative rounded-2xl overflow-hidden aspect-[4/3] bg-[#0A1F17] flex items-center justify-center border border-[#DCE8DC]">
-              <img src={diagnosis.imageUrl || "/sample_images/sample_tomato_late_blight.jpg"} alt="Analyzed leaf specimen" className="w-full h-full object-cover" />
+              <img src={displayImage} alt="Analyzed leaf specimen" className="w-full h-full object-cover" />
               {viewMode === "attention" && (hasRealGradcam ? (
                 <img src={gradcamOverlay} alt="Grad-CAM heatmap" className="absolute inset-0 w-full h-full object-cover pointer-events-none mix-blend-screen transition-opacity duration-200" style={{ opacity }} />
               ) : (
@@ -256,20 +374,34 @@ export default function VerdraResultView({ diagnosisData, scanId }: ResultViewPr
                 <span className={isHealthy ? "badge-success" : "badge-danger"}>{isHealthy ? "Healthy Plant" : "Disease Detected"}</span>
               </div>
               <h2 className="text-3xl sm:text-4xl font-extrabold text-[#12372A] tracking-tight mb-2 font-heading">{displayDisease}</h2>
-              <div className="flex items-baseline gap-2 pb-6 border-b border-[#DCE8DC]">
-                <span className="text-4xl sm:text-5xl font-extrabold text-[#2E7D32] font-mono">{confidencePercent}</span>
-                <span className="text-sm font-bold text-[#66736B] uppercase tracking-wide">Model Confidence</span>
+              <div className="flex items-baseline justify-between gap-2 pb-3 border-b border-[#DCE8DC]">
+                <div className="flex items-baseline gap-2">
+                  <span className="text-4xl sm:text-5xl font-extrabold text-[#2E7D32] font-mono">{confidencePercent}</span>
+                  <span className="text-sm font-bold text-[#66736B] uppercase tracking-wide">Model Confidence</span>
+                </div>
+                <span className={`px-2.5 py-1 rounded-lg text-xs font-mono font-bold ${
+                  (diagnosis.confidence_level === "HIGH" || diagnosis.confidence >= 0.8)
+                    ? "bg-[#EEF6EC] text-[#2E7D32]"
+                    : "bg-[#FFFBEB] text-[#D97706]"
+                }`}>
+                  {diagnosis.confidence_level || (diagnosis.confidence >= 0.8 ? "HIGH" : "MODERATE")} CONFIDENCE
+                </span>
               </div>
-              <div className="grid grid-cols-3 gap-3 pt-6 text-center">
+              <p className="text-xs text-[#66736B] my-2">
+                {diagnosis.confidence_message || (diagnosis.confidence >= 0.8
+                  ? "The model strongly favors this disease class."
+                  : "Prediction accepted above threshold (0.55). Field confirmation advised.")}
+              </p>
+              <div className="grid grid-cols-3 gap-3 pt-4 text-center">
                 <div className="p-3.5 rounded-2xl bg-[#F8FAF6] border border-[#DCE8DC]"><div className="text-[11px] font-bold uppercase tracking-wider text-[#66736B] mb-1">Visual Severity</div><div className="text-base font-extrabold text-[#12372A]">{severityLevel}</div></div>
                 <div className="p-3.5 rounded-2xl bg-[#F8FAF6] border border-[#DCE8DC]"><div className="text-[11px] font-bold uppercase tracking-wider text-[#66736B] mb-1">Affected Area</div><div className="text-base font-extrabold text-[#12372A] font-mono">{affectedArea}</div></div>
                 <div className="p-3.5 rounded-2xl bg-[#F8FAF6] border border-[#DCE8DC]"><div className="text-[11px] font-bold uppercase tracking-wider text-[#66736B] mb-1">Spread Risk</div><div className={`text-base font-extrabold ${spreadRisk === "High" || spreadRisk === "Critical" ? "text-[#DC2626]" : spreadRisk === "Moderate" ? "text-[#F59E0B]" : "text-[#2E7D32]"}`}>{spreadRisk}</div></div>
               </div>
-              {diagnosis.top_predictions && diagnosis.top_predictions.length > 1 && (
+              {topPredictionsList && topPredictionsList.length > 1 && (
                 <div className="mt-6 pt-5 border-t border-[#DCE8DC]/70">
                   <span className="text-xs font-bold uppercase tracking-wider text-[#66736B] block mb-3 font-heading">Neural Softmax Distribution</span>
                   <div className="space-y-2">
-                    {diagnosis.top_predictions.slice(0, 3).map((item: any, idx: number) => (
+                    {topPredictionsList.slice(0, 3).map((item: any, idx: number) => (
                       <div key={idx} className="flex items-center justify-between text-xs">
                         <span className="text-[#12372A] font-medium">{formatDiseaseName(item.class_name)}</span>
                         <div className="flex items-center gap-2">
@@ -282,6 +414,16 @@ export default function VerdraResultView({ diagnosisData, scanId }: ResultViewPr
                 </div>
               )}
             </div>
+
+            {/* Voice Readout for Accessibility */}
+            <VoiceReadout
+              crop={displayCrop}
+              disease={displayDisease}
+              confidenceExplanation={diagnosis.confidence_message || (diagnosis.confidence >= 0.8 ? "The model strongly favors this disease class." : "The model shows moderate confidence.")}
+              severity={severityLevel}
+              risk={spreadRisk}
+              immediateAction={diagnosis.recommendations?.immediate?.[0] || "Inspect nearby plants and prune affected leaves."}
+            />
           </div>
         </div>
 
@@ -308,6 +450,9 @@ export default function VerdraResultView({ diagnosisData, scanId }: ResultViewPr
             )}
           </div>
         </div>
+
+        {/* Nearby-Risk Spatio-temporal Outbreak Alerts */}
+        <NearbyRiskAlerts fieldId={diagnosis.field_id || displayTag || "all"} />
 
         {/* RECOMMENDATIONS */}
         <div className="verdra-glass p-7 sm:p-9 shadow-md space-y-6">
@@ -360,15 +505,30 @@ export default function VerdraResultView({ diagnosisData, scanId }: ResultViewPr
           </div>
         )}
 
+        {/* Real Disease Progression Timeline */}
+        <DiseaseProgressionTimeline
+          scanId={diagnosis.id || scanId}
+          currentCrop={displayCrop}
+          initialFieldId={diagnosis.field_id || diagnosis.fieldTag}
+        />
+
         {/* ACTIONS */}
         <div className="verdra-glass p-6 sm:p-7 shadow-md flex flex-wrap items-center justify-between gap-4">
           <div className="flex flex-wrap items-center gap-3">
             <button onClick={handleSaveScan} disabled={saving} className="btn-forest !py-3 !px-5 !text-xs flex items-center gap-2"><Bookmark className="w-4 h-4" /><span>{savedSuccess ? "Saved to History ✓" : saving ? "Saving..." : "Save Scan"}</span></button>
+            <button onClick={() => setShareModalOpen(true)} className="btn-outline !py-3 !px-5 !text-xs flex items-center gap-2"><Share2 className="w-4 h-4 text-[#2E7D32]" /><span>Share With Expert</span></button>
             <button onClick={handleGenerateReport} disabled={exporting} className="btn-outline !py-3 !px-5 !text-xs flex items-center gap-2"><FileDown className="w-4 h-4 text-[#2E7D32]" /><span>{exporting ? "Compiling PDF..." : "Generate Report"}</span></button>
             <Link href="/assistant" className="btn-outline !py-3 !px-5 !text-xs flex items-center gap-2"><Bot className="w-4 h-4 text-[#2E7D32]" /><span>Ask Verdra</span></Link>
           </div>
           <Link href="/scan" className="btn-green !py-3 !px-6 !text-xs flex items-center gap-2"><ScanLine className="w-4 h-4" /><span>Scan Another Crop</span></Link>
         </div>
+
+        {/* Secure Expert Share Modal */}
+        <ExpertShareModal
+          scanId={diagnosis.id || scanId || "demo-scan"}
+          isOpen={shareModalOpen}
+          onClose={() => setShareModalOpen(false)}
+        />
       </div>
     </VerdraSidebar>
   );

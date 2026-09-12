@@ -31,6 +31,9 @@ import {
   UploadCloud,
   Wind,
   X,
+  Layers,
+  Share2,
+  MapPin,
 } from "lucide-react";
 import {
   ChangeEvent,
@@ -47,8 +50,18 @@ import {
   checkQuality,
   fetchWeather,
 } from "@/lib/api";
+import OpenCvCameraScanner, { OpenCvScanResult } from "@/components/scan/OpenCvCameraScanner";
+import LeafCaptureOverlay from "@/components/scan/LeafCaptureOverlay";
+import BatchScanSection from "@/components/scan/BatchScanSection";
+import VoiceReadout from "@/components/results/VoiceReadout";
+import ExpertShareModal from "@/components/results/ExpertShareModal";
+import DiseaseProgressionTimeline from "@/components/results/DiseaseProgressionTimeline";
+import LanguageSelector from "@/components/common/LanguageSelector";
+import OfflineQueueBadge from "@/components/common/OfflineQueueBadge";
+import FieldHotspotMap from "@/components/results/FieldHotspotMap";
+import NearbyRiskAlerts from "@/components/results/NearbyRiskAlerts";
 
-type View = "landing" | "dashboard" | "scan" | "result" | "history" | "model_info";
+type View = "landing" | "dashboard" | "scan" | "result" | "history" | "model_info" | "hotspots";
 
 type Prediction = {
   id: string;
@@ -181,7 +194,7 @@ function normalizeResult(raw: any, imageUrl: string): Prediction {
     id:
       raw?.scan_id ||
       raw?.id ||
-      `verdra-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+      `verdra-${Date.now()}`,
 
     crop:
       raw?.crop ||
@@ -629,10 +642,17 @@ function Shell({
           {item("dashboard", "Dashboard", Home)}
           {item("scan", "Scan Crop", ScanLine)}
           {item("history", "History", History, scanCount)}
+          {item("hotspots", "Field Health Map", MapPin)}
           {item("model_info", "Model Info", Cpu)}
         </div>
 
-        <div className="sidebar-bottom">
+        <div className="sidebar-bottom" style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+          <div style={{ padding: "0 4px" }}>
+            <OfflineQueueBadge />
+            <div style={{ marginTop: 8 }}>
+              <LanguageSelector />
+            </div>
+          </div>
           <div className="profile-card">
             <span className="avatar">FM</span>
             <div>
@@ -648,11 +668,17 @@ function Shell({
       )}
 
       <div className="workspace">
-        <div className="mobile-header">
-          <button className="icon-button" onClick={() => setOpen(true)}>
-            <Menu size={22} />
-          </button>
-          <Logo />
+        <div className="mobile-header" style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+            <button className="icon-button" onClick={() => setOpen(true)}>
+              <Menu size={22} />
+            </button>
+            <Logo />
+          </div>
+          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            <OfflineQueueBadge />
+            <LanguageSelector />
+          </div>
         </div>
 
         {children}
@@ -686,13 +712,13 @@ function Dashboard({
   }, []);
 
   const healthy = history.filter((x) =>
-    /healthy/i.test(x.disease)
+    /healthy/i.test(x?.disease || "")
   ).length;
 
   const diseased = Math.max(0, history.length - healthy);
 
   const highRisk = history.filter((x) =>
-    /high|critical/i.test(x.risk.level)
+    /high|critical/i.test(x?.risk?.level || "")
   ).length;
 
   const currentWeather = liveWeather || history[0]?.weather;
@@ -789,10 +815,10 @@ function Dashboard({
 
                   <div className="history-value">
                     <small>Confidence</small>
-                    <strong>{item.confidence.toFixed(1)}%</strong>
+                    <strong>{typeof item?.confidence === "number" ? item.confidence.toFixed(1) : (item?.confidence || 0)}%</strong>
                   </div>
 
-                  <RiskPill level={item.risk.level} />
+                  <RiskPill level={item?.risk?.level || "low"} />
 
                   <ChevronRight size={18} color="#9aa59d" />
                 </article>
@@ -982,6 +1008,15 @@ function ScanPage({
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const cameraInputRef = useRef<HTMLInputElement>(null);
+  const [scannerOpen, setScannerOpen] = useState(false);
+  const [scanMode, setScanMode] = useState<"single" | "batch">("single");
+  const [captureOverlayOpen, setCaptureOverlayOpen] = useState(false);
+
+  const handleLeafCaptured = (capturedFile: File, previewUrl: string) => {
+    handleFile(capturedFile);
+    setPreview(previewUrl);
+    setCaptureOverlayOpen(false);
+  };
 
   const stages = [
     "Checking image resolution and lighting",
@@ -1135,74 +1170,113 @@ function ScanPage({
         </div>
       </div>
 
-      <div className="scan-layout">
-        <section className="scan-main panel">
-          {!loading ? (
-            <>
-              <label
-                className={`upload-zone ${preview ? "has-image" : ""}`}
-                onDragOver={(e) => e.preventDefault()}
-                onDrop={(e: DragEvent) => {
-                  e.preventDefault();
-                  handleFile(e.dataTransfer.files?.[0] || null);
-                }}
-              >
-                {preview ? (
-                  <>
-                    <img
-                      className="preview-image"
-                      src={preview}
-                      alt="Crop leaf preview"
-                    />
+      {/* Mode Switcher: Single Scan | Batch Scan */}
+      <div style={{ display: "flex", justifyContent: "center", marginBottom: 24 }}>
+        <div style={{ display: "inline-flex", padding: 4, background: "var(--bg-subtle, #EEF6EC)", borderRadius: 16, border: "1px solid var(--border, #DCE8DC)", gap: 4 }}>
+          <button
+            type="button"
+            className={`button ${scanMode === "single" ? "primary" : "secondary"}`}
+            style={{ padding: "8px 18px", fontSize: 13, borderRadius: 12 }}
+            onClick={() => setScanMode("single")}
+          >
+            <ScanLine size={15} />
+            Single Scan
+          </button>
+          <button
+            type="button"
+            className={`button ${scanMode === "batch" ? "primary" : "secondary"}`}
+            style={{ padding: "8px 18px", fontSize: 13, borderRadius: 12 }}
+            onClick={() => setScanMode("batch")}
+          >
+            <Layers size={15} />
+            Batch Scan (2–10 Leaves)
+          </button>
+        </div>
+      </div>
 
-                    <div className="preview-overlay">
-                      <span>
-                        <Camera size={18} />
-                        Change image
+      {scanMode === "batch" ? (
+        <BatchScanSection />
+      ) : (
+        <div className="scan-layout">
+          <section className="scan-main panel">
+            {!loading ? (
+              <>
+                <label
+                  className={`upload-zone ${preview ? "has-image" : ""}`}
+                  onDragOver={(e) => e.preventDefault()}
+                  onDrop={(e: DragEvent) => {
+                    e.preventDefault();
+                    handleFile(e.dataTransfer.files?.[0] || null);
+                  }}
+                >
+                  {preview ? (
+                    <>
+                      <img
+                        className="preview-image"
+                        src={preview}
+                        alt="Crop leaf preview"
+                      />
+
+                      <div className="preview-overlay">
+                        <span>
+                          <Camera size={18} />
+                          Change image
+                        </span>
+                      </div>
+                    </>
+                  ) : (
+                    <div className="upload-empty">
+                      <span className="upload-icon">
+                        <UploadCloud size={30} />
                       </span>
+
+                      <h2>Drop your crop leaf image here</h2>
+
+                      <p>or click to browse from your device</p>
+
+                      <span className="upload-help">
+                        JPG, JPEG, PNG, WEBP • Maximum 10 MB
+                      </span>
+
+                      <div className="upload-action-row">
+                        <button
+                          type="button"
+                          className="button primary"
+                          onClick={(e) => {
+                            e.preventDefault();
+                            setCaptureOverlayOpen(true);
+                          }}
+                        >
+                          <Camera size={16} />
+                          Capture Camera
+                        </button>
+
+                        <button
+                          type="button"
+                          className="button secondary"
+                          onClick={(e) => {
+                            e.preventDefault();
+                            fileInputRef.current?.click();
+                          }}
+                        >
+                          <UploadCloud size={16} />
+                          Browse Files
+                        </button>
+
+                        <button
+                          type="button"
+                          className="button secondary"
+                          onClick={(e) => {
+                            e.preventDefault();
+                            setScannerOpen(true);
+                          }}
+                        >
+                          <Sparkles size={16} />
+                          OpenCV Scanner
+                        </button>
+                      </div>
                     </div>
-                  </>
-                ) : (
-                  <div className="upload-empty">
-                    <span className="upload-icon">
-                      <UploadCloud size={30} />
-                    </span>
-
-                    <h2>Drop your crop leaf image here</h2>
-
-                    <p>or click to browse from your device</p>
-
-                    <span className="upload-help">
-                      JPG, JPEG, PNG, WEBP • Maximum 10 MB
-                    </span>
-
-                    <div className="upload-action-row">
-                      <button
-                        type="button"
-                        className="button secondary"
-                        onClick={(e) => {
-                          e.preventDefault();
-                          fileInputRef.current?.click();
-                        }}
-                      >
-                        <UploadCloud size={16} />
-                        Browse Files
-                      </button>
-
-                      <button
-                        type="button"
-                        className="button secondary"
-                        onClick={(e) => {
-                          e.preventDefault();
-                          cameraInputRef.current?.click();
-                        }}
-                      >
-                        <Camera size={16} />
-                        Capture Camera
-                      </button>
-                    </div>
-                  </div>
-                )}
+                  )}
 
                 <input
                   ref={fileInputRef}
@@ -1399,6 +1473,24 @@ function ScanPage({
           </section>
         </aside>
       </div>
+      )}
+
+      <OpenCvCameraScanner
+        isOpen={scannerOpen}
+        onClose={() => setScannerOpen(false)}
+        onCapture={(res) => {
+          handleFile(res.file);
+          if (res.enhancedUrl || res.previewUrl) {
+            setPreview(res.enhancedUrl || res.previewUrl);
+          }
+        }}
+      />
+
+      <LeafCaptureOverlay
+        isOpen={captureOverlayOpen}
+        onClose={() => setCaptureOverlayOpen(false)}
+        onCapture={handleLeafCaptured}
+      />
     </div>
   );
 }
@@ -1415,6 +1507,7 @@ function ResultPage({
   isSaved: boolean;
 }) {
   const [showGradcam, setShowGradcam] = useState(false);
+  const [shareModalOpen, setShareModalOpen] = useState(false);
 
   const gradcam =
     resolveApiAsset(result.gradcamUrl) ||
@@ -1444,6 +1537,14 @@ function ResultPage({
         </div>
 
         <div style={{ display: "flex", gap: "10px", flexWrap: "wrap" }}>
+          <button
+            className="button secondary"
+            onClick={() => setShareModalOpen(true)}
+          >
+            <Share2 size={17} />
+            Share With Expert
+          </button>
+
           <button
             className={`button ${isSaved ? "saved" : "secondary"}`}
             onClick={() => onSaveScan(result)}
@@ -1600,12 +1701,25 @@ function ResultPage({
             </p>
           )}
 
-          <div className="confidence-block">
-            <strong>
-              {result.confidence.toFixed(1)}
-              <small>%</small>
-            </strong>
-            <span>Model confidence</span>
+          <div className="confidence-block" style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
+            <div>
+              <strong>
+                {result.confidence.toFixed(1)}
+                <small>%</small>
+              </strong>
+              <span>Model confidence</span>
+            </div>
+            <span style={{
+              fontSize: "11px",
+              fontWeight: 700,
+              fontFamily: "monospace",
+              padding: "4px 8px",
+              borderRadius: "8px",
+              background: (result.confidence >= 80) ? "rgba(46, 125, 50, 0.1)" : "rgba(245, 158, 11, 0.15)",
+              color: (result.confidence >= 80) ? "var(--forest, #12372A)" : "#b45309"
+            }}>
+              {result.confidence >= 80 ? "HIGH CONFIDENCE" : "MODERATE CONFIDENCE"}
+            </span>
           </div>
 
           <div className="confidence-bar">
@@ -1652,6 +1766,18 @@ function ResultPage({
             </div>
           )}
         </section>
+      </div>
+
+      {/* Voice Read-out for Accessibility */}
+      <div style={{ marginBottom: 24 }}>
+        <VoiceReadout
+          crop={result.crop}
+          disease={result.disease}
+          confidenceExplanation={result.uncertaintyMessage || (result.confidence >= 80 ? "The model strongly favors this disease class." : "The model shows moderate confidence.")}
+          severity={result.severity.level}
+          risk={result.risk.level}
+          immediateAction={result.recommendations?.immediate?.[0] || "Inspect foliage and prune affected leaves."}
+        />
       </div>
 
       <section className="panel environment-section">
@@ -1784,6 +1910,22 @@ function ResultPage({
           </div>
         </div>
       </section>
+
+      {/* Real Disease Progression Timeline */}
+      <div style={{ marginTop: 28 }}>
+        <DiseaseProgressionTimeline
+          scanId={result.id}
+          currentCrop={result.crop}
+          initialFieldId="Field A"
+        />
+      </div>
+
+      {/* Secure Read-Only Expert Share Link Modal */}
+      <ExpertShareModal
+        scanId={result.id}
+        isOpen={shareModalOpen}
+        onClose={() => setShareModalOpen(false)}
+      />
     </div>
   );
 }
@@ -1838,16 +1980,16 @@ function HistoryPage({
               <div className="history-card-body">
                 <div className="history-card-header">
                   <div>
-                    <strong>{item.crop}</strong>
-                    <span>{item.disease}</span>
+                    <strong>{item?.crop || "Crop"}</strong>
+                    <span>{item?.disease || "Analysis"}</span>
                   </div>
-                  <RiskPill level={item.risk.level} />
+                  <RiskPill level={item?.risk?.level || "low"} />
                 </div>
 
                 <div className="history-card-stats">
                   <div>
                     <small>Confidence</small>
-                    <strong>{item.confidence.toFixed(1)}%</strong>
+                    <strong>{typeof item?.confidence === "number" ? item.confidence.toFixed(1) : (item?.confidence || 0)}%</strong>
                   </div>
                   <div>
                     <small>Severity</small>
@@ -2172,6 +2314,22 @@ export default function VerdraApp() {
       )}
 
       {view === "model_info" && <ModelInfoPage navigate={navigate} />}
+
+      {view === "hotspots" && (
+        <div className="page" style={{ maxWidth: 1100, margin: "0 auto", padding: "24px 20px" }}>
+          <div className="page-header">
+            <div>
+              <span className="page-kicker">EPIDEMIOLOGICAL RECONNAISSANCE</span>
+              <h1>Field Health Map &amp; Cluster Alerts</h1>
+              <p>Real-time geospatial hotspot detection across farm plots based on verified scan records.</p>
+            </div>
+          </div>
+          <div style={{ display: "flex", flexDirection: "column", gap: 24, marginTop: 24 }}>
+            <NearbyRiskAlerts />
+            <FieldHotspotMap />
+          </div>
+        </div>
+      )}
     </Shell>
   );
 }
