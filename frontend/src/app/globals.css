@@ -2265,8 +2265,11 @@ h3,
     gap: 20px;
     padding-top: 20px;
     padding-bottom: 24px;
-    align-items: flex-start;
-    justify-content: flex-end;
+    padding-left: 20px;
+    padding-right: 20px;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
   }
 
   .hero-copy {
@@ -2280,6 +2283,10 @@ h3,
     border-radius: 0;
     box-shadow: none;
     margin: 0;
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
   }
 
   .hero h1 {
@@ -2289,8 +2296,7 @@ h3,
     color: #ffffff;
     font-weight: 800;
     text-shadow: 0 2px 12px rgba(0, 0, 0, 0.7), 0 1px 3px rgba(0, 0, 0, 0.5);
-    overflow-wrap: break-word;
-    word-break: break-word;
+    text-align: center;
   }
 
   .hero h1 span {
@@ -2304,6 +2310,8 @@ h3,
     color: #e8f0eb;
     font-weight: 500;
     text-shadow: 0 1px 8px rgba(0, 0, 0, 0.6), 0 1px 2px rgba(0, 0, 0, 0.4);
+    text-align: center;
+    max-width: 380px;
   }
 
   .hero-actions {
