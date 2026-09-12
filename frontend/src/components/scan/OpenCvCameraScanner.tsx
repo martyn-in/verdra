@@ -144,16 +144,50 @@ export default function OpenCvCameraScanner({
     setErrorMessage("");
 
     try {
-      const constraints: MediaStreamConstraints = {
-        video: {
-          facingMode: { ideal: facingMode },
-          width: { ideal: 1280 },
-          height: { ideal: 720 },
+      const constraintTiers: MediaStreamConstraints[] = [
+        {
+          video: {
+            facingMode: { ideal: facingMode },
+            width: { ideal: 1280 },
+            height: { ideal: 720 },
+          },
+          audio: false,
         },
-        audio: false,
-      };
+        {
+          video: { facingMode: { ideal: facingMode } },
+          audio: false,
+        },
+        {
+          video: { facingMode: facingMode === "environment" ? { ideal: "user" } : { ideal: "environment" } },
+          audio: false,
+        },
+        {
+          video: true,
+          audio: false,
+        },
+      ];
 
-      const newStream = await navigator.mediaDevices.getUserMedia(constraints);
+      let newStream: MediaStream | null = null;
+      let lastErr: any = null;
+      for (const tier of constraintTiers) {
+        try {
+          const s = await navigator.mediaDevices.getUserMedia(tier);
+          if (s && s.getVideoTracks().length > 0) {
+            newStream = s;
+            break;
+          }
+        } catch (e: any) {
+          lastErr = e;
+          if (e?.name === "NotAllowedError" || e?.name === "PermissionDeniedError") {
+            throw e;
+          }
+        }
+      }
+
+      if (!newStream) {
+        throw lastErr || new Error("Unable to obtain camera stream");
+      }
+
       setStream(newStream);
       setPermissionStatus("granted");
 

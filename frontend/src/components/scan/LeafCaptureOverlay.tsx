@@ -3,17 +3,12 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import {
   Camera,
-  CameraOff,
   RefreshCw,
   X,
-  AlertTriangle,
-  Sun,
-  Focus,
-  Maximize2,
-  CheckCircle2,
   ArrowRight,
   RotateCcw,
   Smartphone,
+  ShieldAlert,
 } from "lucide-react";
 import { useTranslation } from "@/context/LanguageContext";
 
@@ -59,6 +54,66 @@ interface LeafCaptureOverlayProps {
   onCapture: (file: File, previewUrl: string) => void;
 }
 
+/**
+ * Robust progressive camera stream acquisition across mobile, desktop, and tablets.
+ * Falls back through 4 progressive constraint tiers to ensure camera access succeeds
+ * on any device (environment rear camera, user-facing webcam, or basic video stream).
+ */
+async function getCameraStream(preferredFacing: "environment" | "user"): Promise<MediaStream> {
+  if (typeof window === "undefined" || !navigator?.mediaDevices?.getUserMedia) {
+    throw new Error("Camera API is not supported in this browser environment.");
+  }
+
+  const constraintTiers: MediaStreamConstraints[] = [
+    // Tier 1: Ideal facingMode with HD dimensions
+    {
+      video: {
+        facingMode: { ideal: preferredFacing },
+        width: { ideal: 1280 },
+        height: { ideal: 720 },
+      },
+      audio: false,
+    },
+    // Tier 2: Facing mode without dimensional constraints
+    {
+      video: {
+        facingMode: { ideal: preferredFacing },
+      },
+      audio: false,
+    },
+    // Tier 3: Opposite facing mode (e.g. user-facing FaceTime/USB camera on laptops/desktops)
+    {
+      video: {
+        facingMode: preferredFacing === "environment" ? { ideal: "user" } : { ideal: "environment" },
+      },
+      audio: false,
+    },
+    // Tier 4: Most permissive - any video device available
+    {
+      video: true,
+      audio: false,
+    },
+  ];
+
+  let lastError: any = null;
+  for (const constraints of constraintTiers) {
+    try {
+      const s = await navigator.mediaDevices.getUserMedia(constraints);
+      if (s && s.getVideoTracks().length > 0) {
+        return s;
+      }
+    } catch (err: any) {
+      lastError = err;
+      // If user explicitly denied browser permission dialog, stop iterating
+      if (err?.name === "NotAllowedError" || err?.name === "PermissionDeniedError") {
+        throw err;
+      }
+    }
+  }
+
+  throw lastError || new Error("Failed to start camera stream.");
+}
+
 export default function LeafCaptureOverlay({
   isOpen,
   onClose,
@@ -69,16 +124,11 @@ export default function LeafCaptureOverlay({
   const [stream, setStream] = useState<MediaStream | null>(null);
   const [activeFilter, setActiveFilter] = useState<BioFilterMode>("natural");
   const [permissionStatus, setPermissionStatus] = useState<
-    "prompt" | "granted" | "denied" | "unsupported" | "error"
-  >("prompt");
+    "connecting" | "granted" | "denied" | "unsupported" | "error"
+  >("connecting");
   const [errorMessage, setErrorMessage] = useState<string>("");
   const [facingMode, setFacingMode] = useState<"environment" | "user">("environment");
   const [hasMultipleCameras, setHasMultipleCameras] = useState(false);
-
-  // Live quality indicators
-  const [lighting, setLighting] = useState<"Good" | "Too Dark" | "Too Bright">("Good");
-  const [focus, setFocus] = useState<"Good" | "Blurry">("Good");
-  const [framing, setFraming] = useState<"Ready" | "Align Leaf">("Ready");
 
   // Post-capture review states
   const [capturedBlobUrl, setCapturedBlobUrl] = useState<string | null>(null);
@@ -87,12 +137,10 @@ export default function LeafCaptureOverlay({
   // DOM Refs
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const nativeCameraInputRef = useRef<HTMLInputElement | null>(null);
-  const animFrameRef = useRef<number | null>(null);
 
-  // Check camera hardware
+  // Check hardware camera availability
   useEffect(() => {
     if (typeof window === "undefined" || !navigator?.mediaDevices?.enumerateDevices) {
-      setPermissionStatus("unsupported");
       return;
     }
 
@@ -111,55 +159,58 @@ export default function LeafCaptureOverlay({
       stream.getTracks().forEach((track) => track.stop());
       setStream(null);
     }
-    if (animFrameRef.current) {
-      cancelAnimationFrame(animFrameRef.current);
-      animFrameRef.current = null;
+    if (videoRef.current) {
+      videoRef.current.srcObject = null;
     }
   }, [stream]);
 
-  // Start real camera stream
+  // Start real camera stream with multi-tier fallback
   const startCamera = useCallback(async () => {
     stopCamera();
-    setPermissionStatus("prompt");
+    setPermissionStatus("connecting");
     setErrorMessage("");
 
-    if (!navigator?.mediaDevices?.getUserMedia) {
+    if (typeof window === "undefined" || !navigator?.mediaDevices?.getUserMedia) {
       setPermissionStatus("unsupported");
+      setErrorMessage("Direct live camera stream is not supported in this browser. You can use your device's camera app below.");
       return;
     }
 
     try {
-      const constraints: MediaStreamConstraints = {
-        video: {
-          facingMode: { ideal: facingMode },
-          width: { ideal: 1280 },
-          height: { ideal: 720 },
-        },
-        audio: false,
-      };
-
-      const newStream = await navigator.mediaDevices.getUserMedia(constraints);
+      const newStream = await getCameraStream(facingMode);
       setStream(newStream);
       setPermissionStatus("granted");
+
+      if (navigator?.mediaDevices?.enumerateDevices) {
+        navigator.mediaDevices
+          .enumerateDevices()
+          .then((devices) => {
+            const videoInputs = devices.filter((d) => d.kind === "videoinput");
+            setHasMultipleCameras(videoInputs.length > 1);
+          })
+          .catch(() => {});
+      }
 
       if (videoRef.current) {
         videoRef.current.srcObject = newStream;
         videoRef.current.play().catch(() => {});
       }
     } catch (err: any) {
-      if (err.name === "NotAllowedError" || err.name === "PermissionDeniedError") {
+      console.warn("Camera initialization error:", err);
+      if (err?.name === "NotAllowedError" || err?.name === "PermissionDeniedError") {
         setPermissionStatus("denied");
-        setErrorMessage("Camera permission was not granted. You can use the device camera app below.");
-      } else if (err.name === "NotFoundError" || err.name === "DevicesNotFoundError") {
+        setErrorMessage("Camera access was not granted. Tap below to use your device's camera app.");
+      } else if (err?.name === "NotFoundError" || err?.name === "DevicesNotFoundError") {
         setPermissionStatus("error");
-        setErrorMessage("No direct camera device detected on this system.");
+        setErrorMessage("No direct camera device detected on this system. You can snap a leaf photo using your device camera app.");
       } else {
         setPermissionStatus("error");
-        setErrorMessage("Direct video stream could not be started.");
+        setErrorMessage("Direct camera stream could not be started. You can use your device's camera app below.");
       }
     }
   }, [facingMode, stopCamera]);
 
+  // Handle open / close lifecycle
   useEffect(() => {
     if (isOpen && !capturedBlobUrl) {
       startCamera();
@@ -167,9 +218,22 @@ export default function LeafCaptureOverlay({
       stopCamera();
       setCapturedBlobUrl(null);
       setCapturedFile(null);
+      setPermissionStatus("connecting");
     }
     return () => stopCamera();
   }, [isOpen, startCamera, stopCamera, capturedBlobUrl]);
+
+  // Keep videoRef.current.srcObject tightly bound to stream
+  useEffect(() => {
+    if (videoRef.current && stream && permissionStatus === "granted") {
+      if (videoRef.current.srcObject !== stream) {
+        videoRef.current.srcObject = stream;
+      }
+      videoRef.current.play().catch((err) => {
+        console.warn("Video play error:", err);
+      });
+    }
+  }, [stream, permissionStatus]);
 
   // Capture frame from video
   const handleCaptureFromVideo = useCallback(() => {
@@ -236,7 +300,7 @@ export default function LeafCaptureOverlay({
         if (e.target === e.currentTarget) onClose();
       }}
     >
-      {/* Hidden native camera trigger */}
+      {/* Hidden native device camera trigger */}
       <input
         ref={nativeCameraInputRef}
         type="file"
@@ -309,69 +373,90 @@ export default function LeafCaptureOverlay({
 
         {/* Viewfinder Body */}
         <div className="leaf-capture-viewfinder">
-          {/* Active Live Video */}
-          {permissionStatus === "granted" && !capturedBlobUrl && (
-            <div style={{ position: "relative", width: "100%", height: "100%" }}>
-              <video
-                ref={videoRef}
-                playsInline
-                autoPlay
-                muted
-                style={{
-                  width: "100%",
-                  height: "100%",
-                  objectFit: "cover",
-                  filter: FILTER_CONFIG[activeFilter]?.css || "none",
-                  transition: "filter 0.2s ease",
-                }}
-              />
+          {/* Always-mounted video element for immediate srcObject binding */}
+          <video
+            ref={videoRef}
+            playsInline
+            autoPlay
+            muted
+            style={{
+              width: "100%",
+              height: "100%",
+              objectFit: "cover",
+              filter: FILTER_CONFIG[activeFilter]?.css || "none",
+              transition: "filter 0.2s ease",
+              display: permissionStatus === "granted" && !capturedBlobUrl ? "block" : "none",
+            }}
+          />
 
-              {/* Leaf Reticle Guide */}
+          {/* Leaf Reticle Guide (when video is actively playing) */}
+          {permissionStatus === "granted" && !capturedBlobUrl && (
+            <div
+              style={{
+                position: "absolute",
+                inset: 0,
+                pointerEvents: "none",
+                display: "flex",
+                flexDirection: "column",
+                alignItems: "center",
+                justifyContent: "center",
+                padding: 20,
+              }}
+            >
               <div
                 style={{
-                  position: "absolute",
-                  inset: 0,
-                  pointerEvents: "none",
+                  width: 240,
+                  height: 240,
+                  borderRadius: 24,
+                  border: "2px dashed #52b788",
+                  boxShadow: "0 0 25px rgba(82,183,136,0.35)",
+                  position: "relative",
                   display: "flex",
-                  flexDirection: "column",
                   alignItems: "center",
                   justifyContent: "center",
-                  padding: 20,
                 }}
               >
-                {/* Central Leaf Frame */}
-                <div
+                <span
                   style={{
-                    width: 240,
-                    height: 240,
-                    borderRadius: 24,
-                    border: "2px dashed #52b788",
-                    boxShadow: "0 0 25px rgba(82,183,136,0.35)",
-                    position: "relative",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
+                    fontSize: 11,
+                    fontWeight: 700,
+                    color: "#ffffff",
+                    background: "rgba(0,0,0,0.65)",
+                    padding: "4px 12px",
+                    borderRadius: 100,
+                    backdropFilter: "blur(4px)",
                   }}
                 >
-                  <span
-                    style={{
-                      fontSize: 11,
-                      fontWeight: 700,
-                      color: "#ffffff",
-                      background: "rgba(0,0,0,0.6)",
-                      padding: "4px 12px",
-                      borderRadius: 100,
-                      backdropFilter: "blur(4px)",
-                    }}
-                  >
-                    Place Leaf Here
-                  </span>
-                </div>
+                  Place Leaf Here
+                </span>
               </div>
             </div>
           )}
 
-          {/* Captured Preview */}
+          {/* Connecting State */}
+          {permissionStatus === "connecting" && !capturedBlobUrl && (
+            <div style={{ textAlign: "center", padding: 24, maxWidth: 360, zIndex: 10 }}>
+              <div
+                style={{
+                  width: 44,
+                  height: 44,
+                  borderRadius: "50%",
+                  border: "3px solid rgba(82, 183, 136, 0.25)",
+                  borderTopColor: "#52b788",
+                  animation: "spin 0.9s linear infinite",
+                  margin: "0 auto 16px",
+                }}
+              />
+              <h4 style={{ color: "white", fontSize: 15, fontWeight: 700, margin: "0 0 4px" }}>
+                Connecting Camera...
+              </h4>
+              <p style={{ color: "#8ea396", fontSize: 12, margin: 0 }}>
+                Initializing foliar viewfinder feed
+              </p>
+            </div>
+          )}
+
+          {/* Captured Preview State */}
           {capturedBlobUrl && (
             <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center", padding: 12 }}>
               <img
@@ -382,50 +467,72 @@ export default function LeafCaptureOverlay({
             </div>
           )}
 
-          {/* Camera Permission Denied or Unavailable Fallback */}
-          {permissionStatus !== "granted" && !capturedBlobUrl && (
+          {/* Fallback & Permission Handler */}
+          {(permissionStatus === "denied" || permissionStatus === "error" || permissionStatus === "unsupported") && !capturedBlobUrl && (
             <div style={{ textAlign: "center", padding: 24, maxWidth: 380, zIndex: 10 }}>
               <div
                 style={{
                   width: 50,
                   height: 50,
                   borderRadius: 16,
-                  background: "rgba(220,38,38,0.15)",
-                  border: "1px solid rgba(220,38,38,0.3)",
+                  background: permissionStatus === "denied" ? "rgba(234,179,8,0.15)" : "rgba(46,125,50,0.18)",
+                  border: permissionStatus === "denied" ? "1px solid rgba(234,179,8,0.3)" : "1px solid rgba(82,183,136,0.35)",
                   display: "flex",
                   alignItems: "center",
                   justifyContent: "center",
-                  color: "#f87171",
+                  color: permissionStatus === "denied" ? "#facc15" : "#52b788",
                   margin: "0 auto 14px",
                 }}
               >
-                <CameraOff size={24} />
+                {permissionStatus === "denied" ? <ShieldAlert size={26} /> : <Camera size={26} />}
               </div>
               <h4 style={{ color: "white", fontSize: 16, fontWeight: 800, margin: "0 0 6px" }}>
-                Live Stream Unavailable
+                {permissionStatus === "denied" ? "Camera Permission Needed" : "Device Camera Access"}
               </h4>
               <p style={{ color: "#8ea396", fontSize: 12, margin: "0 0 18px", lineHeight: 1.5 }}>
-                {errorMessage || "Click below to snap a leaf photo using your device's built-in camera app."}
+                {errorMessage || "Tap below to snap a leaf photo using your device's built-in camera app."}
               </p>
-              <button
-                type="button"
-                onClick={() => nativeCameraInputRef.current?.click()}
-                style={{
-                  background: "#2e7d32",
-                  color: "white",
-                  border: 0,
-                  borderRadius: 12,
-                  padding: "12px 20px",
-                  fontSize: 13,
-                  fontWeight: 800,
-                  cursor: "pointer",
-                  display: "inline-flex",
-                  alignItems: "center",
-                  gap: 8,
-                }}
-              >
-                <Smartphone size={16} /> Open Device Camera App
-              </button>
+              <div style={{ display: "flex", flexDirection: "column", gap: 10, alignItems: "center" }}>
+                <button
+                  type="button"
+                  onClick={() => nativeCameraInputRef.current?.click()}
+                  style={{
+                    background: "#2e7d32",
+                    color: "white",
+                    border: 0,
+                    borderRadius: 12,
+                    padding: "12px 22px",
+                    fontSize: 13,
+                    fontWeight: 800,
+                    cursor: "pointer",
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: 8,
+                    boxShadow: "0 4px 14px rgba(46,125,50,0.4)",
+                  }}
+                >
+                  <Smartphone size={16} /> Open Device Camera App
+                </button>
+                <button
+                  type="button"
+                  onClick={() => startCamera()}
+                  style={{
+                    background: "rgba(255,255,255,0.08)",
+                    color: "#c2d4c5",
+                    border: "1px solid rgba(255,255,255,0.15)",
+                    borderRadius: 10,
+                    padding: "8px 16px",
+                    fontSize: 12,
+                    fontWeight: 600,
+                    cursor: "pointer",
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: 6,
+                  }}
+                >
+                  <RefreshCw size={13} /> Retry Camera
+                </button>
+              </div>
             </div>
           )}
         </div>

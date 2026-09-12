@@ -1364,6 +1364,29 @@ function ScanPage({
                           {t("scan.browse_files", "Browse Files")}
                         </button>
                       </div>
+
+                      <div style={{ marginTop: 12, textAlign: "center" }}>
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.preventDefault();
+                            cameraInputRef.current?.click();
+                          }}
+                          style={{
+                            background: "none",
+                            border: "none",
+                            color: "#52796f",
+                            fontSize: "0.78rem",
+                            cursor: "pointer",
+                            textDecoration: "underline",
+                            display: "inline-flex",
+                            alignItems: "center",
+                            gap: 4,
+                          }}
+                        >
+                          <span>Or launch device camera directly</span>
+                        </button>
+                      </div>
                     </div>
                   )}
 
