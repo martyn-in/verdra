@@ -5,7 +5,7 @@ import { Globe, Check, ChevronDown } from "lucide-react";
 import { useTranslation, Language } from "@/context/LanguageContext";
 
 const LANGUAGES: { code: Language; label: string; nativeLabel: string }[] = [
-  { code: "en", label: "English", nativeLabel: "English (IN)" },
+  { code: "en", label: "English", nativeLabel: "English" },
   { code: "te", label: "Telugu", nativeLabel: "తెలుగు" },
   { code: "hi", label: "Hindi", nativeLabel: "हिन्दी" },
 ];
@@ -59,8 +59,8 @@ export default function LanguageSelector({
         style={{
           display: "flex",
           width: "100%",
-          minHeight: "40px",
-          padding: "8px 12px",
+          minHeight: "38px",
+          padding: "6px 9px",
           background: "#f1f6ef",
           border: "1px solid #dce6dc",
           borderRadius: "12px",
@@ -70,8 +70,8 @@ export default function LanguageSelector({
           boxSizing: "border-box",
         }}
       >
-        <div style={{ display: "flex", alignItems: "center", gap: "8px", minWidth: 0 }}>
-          <Globe size={16} color="#2e7d32" style={{ flexShrink: 0 }} />
+        <div style={{ display: "flex", alignItems: "center", gap: "5px", minWidth: 0 }}>
+          <Globe size={15} color="#2e7d32" style={{ flexShrink: 0 }} />
           <span
             style={{
               fontSize: "12px",
@@ -79,7 +79,6 @@ export default function LanguageSelector({
               color: "#12372a",
               whiteSpace: "nowrap",
               overflow: "hidden",
-              textOverflow: "ellipsis",
             }}
           >
             {activeLang.nativeLabel}

@@ -5,14 +5,10 @@ import {
   TrendingUp,
   TrendingDown,
   Minus,
-  Calendar,
   Tag,
-  AlertCircle,
   Clock,
-  ArrowRight,
-  ShieldCheck,
   CheckCircle2,
-  Sparkles,
+  Calendar,
 } from "lucide-react";
 import { useTranslation } from "@/context/LanguageContext";
 import { api } from "@/lib/api";
@@ -21,6 +17,9 @@ interface DiseaseProgressionTimelineProps {
   plantId?: string;
   plantTag?: string;
   crop?: string;
+  scanId?: string;
+  currentCrop?: string;
+  initialFieldId?: string;
   currentResult?: any;
   onTagAssigned?: (tag: string) => void;
 }
@@ -28,11 +27,17 @@ interface DiseaseProgressionTimelineProps {
 export default function DiseaseProgressionTimeline({
   plantId,
   plantTag,
-  crop = "Tomato",
+  crop,
+  scanId,
+  currentCrop,
+  initialFieldId,
   currentResult,
   onTagAssigned,
 }: DiseaseProgressionTimelineProps) {
   const { t } = useTranslation();
+
+  const effectiveCrop = crop || currentCrop || "Tomato";
+  const effectivePlantId = plantId || plantTag || scanId || "";
 
   const [activeTag, setActiveTag] = useState(plantTag || "");
   const [customTagInput, setCustomTagInput] = useState("");
@@ -42,12 +47,11 @@ export default function DiseaseProgressionTimeline({
   const [isTagModalOpen, setIsTagModalOpen] = useState(false);
 
   // Generate a friendly readable unique plant tag (e.g. TOM-R3-P12)
-  // Generate a friendly readable unique plant tag (e.g. TOM-R3-P12) deterministically
   const generateReadableTag = () => {
-    const prefix = (crop || "PLANT").slice(0, 3).toUpperCase();
+    const prefix = effectiveCrop.slice(0, 3).toUpperCase();
     const now = Date.now();
-    const row = ((now % 8) + 1); // deterministic row 1-8
-    const num = ((Math.floor(now / 1000) % 90) + 10); // deterministic plant 10-99
+    const row = (now % 8) + 1;
+    const num = (Math.floor(now / 1000) % 90) + 10;
     return `${prefix}-R${row}-P${num}`;
   };
 
@@ -66,10 +70,10 @@ export default function DiseaseProgressionTimeline({
   };
 
   useEffect(() => {
-    if (plantId || plantTag) {
-      loadTimeline(plantId || plantTag || "");
+    if (effectivePlantId) {
+      loadTimeline(effectivePlantId);
     }
-  }, [plantId, plantTag]);
+  }, [effectivePlantId]);
 
   const handleAssignTag = async (tag: string) => {
     if (!tag.trim()) return;
@@ -80,50 +84,110 @@ export default function DiseaseProgressionTimeline({
     try {
       await api.registerPlant({
         plant_tag: cleanTag,
-        crop: crop,
+        crop: effectiveCrop,
         notes: `Registered from scan result on ${new Date().toLocaleDateString()}`,
       });
       if (onTagAssigned) onTagAssigned(cleanTag);
       loadTimeline(cleanTag);
     } catch (e) {
-      // Continue locally
       loadTimeline(cleanTag);
     }
   };
 
   return (
-    <div className="p-6 rounded-3xl bg-[#0f1f16] border border-[#2E7D32]/30 shadow-2xl space-y-6">
-      
+    <div
+      style={{
+        background: "#ffffff",
+        border: "1px solid #dce6dc",
+        borderRadius: "22px",
+        padding: "24px",
+        boxShadow: "0 10px 30px rgba(18, 55, 42, 0.05)",
+        display: "flex",
+        flexDirection: "column",
+        gap: "20px",
+      }}
+    >
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-[#2E7D32]/20">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-2xl bg-[#2E7D32]/20 border border-[#2E7D32]/40 flex items-center justify-center text-[#52B788]">
-            <Clock className="w-5 h-5" />
+      <div
+        style={{
+          display: "flex",
+          flexWrap: "wrap",
+          alignItems: "center",
+          justifyContent: "space-between",
+          gap: "14px",
+          paddingBottom: "16px",
+          borderBottom: "1px solid #edf2ec",
+        }}
+      >
+        <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+          <div
+            style={{
+              width: "42px",
+              height: "42px",
+              borderRadius: "14px",
+              background: "rgba(46, 125, 50, 0.1)",
+              border: "1px solid rgba(46, 125, 50, 0.2)",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              color: "#2e7d32",
+              flexShrink: 0,
+            }}
+          >
+            <Clock size={20} />
           </div>
           <div>
-            <h3 className="text-base font-bold text-white font-heading">
+            <h3 style={{ margin: 0, fontSize: "1.08rem", fontWeight: 800, color: "#12372a", fontFamily: "var(--font-heading, inherit)" }}>
               {t("progression.title", "Disease Progression Timeline")}
             </h3>
-            <p className="text-xs text-[#8EA396]">
+            <p style={{ margin: "2px 0 0", fontSize: "0.82rem", color: "#68756d" }}>
               Track infection severity on the same plant specimen over time.
             </p>
           </div>
         </div>
 
         {/* Plant Tag Badge / Assign Button */}
-        <div className="flex items-center gap-2">
+        <div>
           {activeTag ? (
-            <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-[#2E7D32]/20 border border-[#2E7D32]/40 text-xs font-mono text-[#85E3B3]">
-              <Tag className="w-3.5 h-3.5" />
+            <div
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                gap: "6px",
+                padding: "6px 14px",
+                borderRadius: "10px",
+                background: "rgba(46, 125, 50, 0.12)",
+                border: "1px solid rgba(46, 125, 50, 0.25)",
+                fontSize: "0.8rem",
+                fontWeight: 700,
+                color: "#1b6f2b",
+                fontFamily: "monospace",
+              }}
+            >
+              <Tag size={14} />
               <span>{activeTag}</span>
             </div>
           ) : (
             <button
               type="button"
               onClick={() => setIsTagModalOpen(true)}
-              className="btn-forest !px-4 !py-2 !text-xs flex items-center gap-1.5"
+              style={{
+                background: "#2e7d32",
+                color: "#ffffff",
+                border: "none",
+                borderRadius: "12px",
+                padding: "9px 16px",
+                fontSize: "0.82rem",
+                fontWeight: 700,
+                cursor: "pointer",
+                display: "inline-flex",
+                alignItems: "center",
+                gap: "7px",
+                boxShadow: "0 4px 12px rgba(46, 125, 50, 0.22)",
+                transition: "transform 0.15s ease",
+              }}
             >
-              <Tag className="w-3.5 h-3.5" />
+              <Tag size={15} />
               <span>{t("result.track_plant", "Track This Plant")}</span>
             </button>
           )}
@@ -132,45 +196,80 @@ export default function DiseaseProgressionTimeline({
 
       {/* Tag Assignment Dialog */}
       {isTagModalOpen && (
-        <div className="p-4 rounded-2xl bg-[#12231A] border border-[#2E7D32]/40 space-y-3 animate-in fade-in duration-150">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-bold text-white font-heading">
+        <div
+          style={{
+            padding: "16px 18px",
+            borderRadius: "16px",
+            background: "#f7faf6",
+            border: "1px solid #dce6dc",
+            display: "flex",
+            flexDirection: "column",
+            gap: "12px",
+          }}
+        >
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+            <span style={{ fontSize: "0.85rem", fontWeight: 700, color: "#12372a" }}>
               Assign Plant Specimen Tag
             </span>
             <button
               type="button"
               onClick={() => setIsTagModalOpen(false)}
-              className="text-xs text-[#8EA396] hover:text-white"
+              style={{ background: "none", border: "none", color: "#68756d", fontSize: "0.8rem", cursor: "pointer" }}
             >
               Cancel
             </button>
           </div>
-          <p className="text-xs text-[#8EA396]">
-            Enter a row/plot plant tag (e.g. TOM-R3-P12) or generate one automatically.
+          <p style={{ margin: 0, fontSize: "0.8rem", color: "#68756d" }}>
+            Enter a row/plot plant tag (e.g. TOM-R3-P12) or auto-generate one for this crop.
           </p>
 
-          <div className="flex flex-col sm:flex-row gap-2">
+          <div style={{ display: "flex", flexWrap: "wrap", gap: "8px" }}>
             <input
               type="text"
               value={customTagInput}
               onChange={(e) => setCustomTagInput(e.target.value)}
-              placeholder="e.g., TOM-R3-P12"
-              className="flex-1 bg-black/40 border border-[#2E7D32]/40 rounded-xl px-3 py-2 text-xs text-white placeholder:text-neutral-500 font-mono focus:outline-none focus:border-[#52B788]"
+              placeholder="e.g. TOM-R3-P12"
+              style={{
+                flex: "1 1 180px",
+                padding: "8px 12px",
+                borderRadius: "10px",
+                border: "1px solid #c8d8c8",
+                background: "#ffffff",
+                fontSize: "0.82rem",
+                color: "#12372a",
+                fontFamily: "monospace",
+                outline: "none",
+              }}
             />
             <button
               type="button"
               onClick={() => handleAssignTag(customTagInput || generateReadableTag())}
-              className="btn-forest !px-4 !py-2 !text-xs whitespace-nowrap"
+              style={{
+                background: "#2e7d32",
+                color: "#ffffff",
+                border: "none",
+                borderRadius: "10px",
+                padding: "8px 16px",
+                fontSize: "0.82rem",
+                fontWeight: 700,
+                cursor: "pointer",
+              }}
             >
               Save Plant Tag
             </button>
             <button
               type="button"
-              onClick={() => {
-                const gen = generateReadableTag();
-                setCustomTagInput(gen);
+              onClick={() => setCustomTagInput(generateReadableTag())}
+              style={{
+                background: "#ffffff",
+                color: "#2e7d32",
+                border: "1px solid #2e7d32",
+                borderRadius: "10px",
+                padding: "8px 14px",
+                fontSize: "0.82rem",
+                fontWeight: 600,
+                cursor: "pointer",
               }}
-              className="btn-outline !px-3 !py-2 !text-xs !text-white whitespace-nowrap"
             >
               Auto-Generate
             </button>
@@ -178,74 +277,63 @@ export default function DiseaseProgressionTimeline({
         </div>
       )}
 
-      {/* Progression Status & Trend */}
-      {timelineData && timelineData.timeline.length > 0 && (
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-          <div className="p-4 rounded-2xl bg-black/40 border border-white/5 space-y-1">
-            <span className="text-[11px] text-[#8EA396] font-mono block">Progression Trend</span>
-            <div className="flex items-center gap-2">
-              {timelineData.trend === "Improving" && (
-                <>
-                  <TrendingDown className="w-5 h-5 text-emerald-400" />
-                  <span className="text-sm font-bold text-emerald-400">
-                    {t("progression.trend_improving", "Improving")}
-                  </span>
-                </>
-              )}
-              {timelineData.trend === "Worsening" && (
-                <>
-                  <TrendingUp className="w-5 h-5 text-rose-400" />
-                  <span className="text-sm font-bold text-rose-400">
-                    {t("progression.trend_worsening", "Worsening")}
-                  </span>
-                </>
-              )}
-              {timelineData.trend === "Stable" && (
-                <>
-                  <Minus className="w-5 h-5 text-neutral-400" />
-                  <span className="text-sm font-bold text-neutral-300">
-                    {t("progression.trend_stable", "Stable")}
-                  </span>
-                </>
-              )}
-              {timelineData.trend !== "Improving" && timelineData.trend !== "Worsening" && timelineData.trend !== "Stable" && (
-                <span className="text-sm font-bold text-[#8EA396]">
-                  {timelineData.trend}
-                </span>
-              )}
+      {/* Progression Status & Trend (When Scans Exist) */}
+      {timelineData && timelineData.timeline && timelineData.timeline.length > 0 && (
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))",
+            gap: "12px",
+          }}
+        >
+          <div style={{ padding: "14px", borderRadius: "14px", background: "#f7faf6", border: "1px solid #e2ebe0" }}>
+            <span style={{ fontSize: "0.72rem", color: "#68756d", fontWeight: 600, textTransform: "uppercase", display: "block", marginBottom: 4 }}>
+              Progression Trend
+            </span>
+            <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+              {timelineData.trend === "Improving" && <TrendingDown size={18} color="#2e7d32" />}
+              {timelineData.trend === "Worsening" && <TrendingUp size={18} color="#d92d20" />}
+              {timelineData.trend === "Stable" && <Minus size={18} color="#68756d" />}
+              <span style={{ fontSize: "0.95rem", fontWeight: 800, color: timelineData.trend === "Worsening" ? "#d92d20" : "#2e7d32" }}>
+                {timelineData.trend || "Stable"}
+              </span>
             </div>
-            <p className="text-[10px] text-[#8EA396] leading-tight">
+            <p style={{ margin: "4px 0 0", fontSize: "0.74rem", color: "#68756d" }}>
               {timelineData.trend_message}
             </p>
           </div>
 
-          <div className="p-4 rounded-2xl bg-black/40 border border-white/5 space-y-1">
-            <span className="text-[11px] text-[#8EA396] font-mono block">Recorded Inspections</span>
-            <span className="text-2xl font-bold text-white font-mono">
-              {timelineData.total_scans}
+          <div style={{ padding: "14px", borderRadius: "14px", background: "#f7faf6", border: "1px solid #e2ebe0" }}>
+            <span style={{ fontSize: "0.72rem", color: "#68756d", fontWeight: 600, textTransform: "uppercase", display: "block", marginBottom: 4 }}>
+              Recorded Scans
             </span>
-            <span className="text-[10px] text-[#8EA396] block">
-              Chronologically recorded scans
+            <span style={{ fontSize: "1.4rem", fontWeight: 800, color: "#12372a", fontFamily: "monospace" }}>
+              {timelineData.total_scans || 1}
+            </span>
+            <span style={{ fontSize: "0.72rem", color: "#68756d", display: "block" }}>
+              Chronologically recorded
             </span>
           </div>
 
-          <div className="p-4 rounded-2xl bg-black/40 border border-white/5 space-y-1">
-            <span className="text-[11px] text-[#8EA396] font-mono block">Scientific Notice</span>
-            <span className="text-xs text-neutral-300 block font-sans leading-relaxed">
-              {t("progression.disclaimer", "Based on estimated visual severity.")}
+          <div style={{ padding: "14px", borderRadius: "14px", background: "#f7faf6", border: "1px solid #e2ebe0" }}>
+            <span style={{ fontSize: "0.72rem", color: "#68756d", fontWeight: 600, textTransform: "uppercase", display: "block", marginBottom: 4 }}>
+              Notice
+            </span>
+            <span style={{ fontSize: "0.75rem", color: "#2d4536", display: "block", lineHeight: 1.4 }}>
+              {t("progression.disclaimer", "Based on estimated visual lesion severity and microclimate.")}
             </span>
           </div>
         </div>
       )}
 
-      {/* Chronological Timeline Cards */}
-      {timelineData && timelineData.timeline.length > 0 ? (
-        <div className="space-y-3">
-          <span className="text-xs font-bold text-white uppercase font-mono tracking-wider">
+      {/* Chronological Timeline List */}
+      {timelineData && timelineData.timeline && timelineData.timeline.length > 0 ? (
+        <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
+          <span style={{ fontSize: "0.75rem", fontWeight: 700, color: "#12372a", textTransform: "uppercase", letterSpacing: "0.05em" }}>
             Chronological Scan Timeline
           </span>
 
-          <div className="relative pl-6 space-y-4 before:absolute before:left-2 before:top-2 before:bottom-2 before:w-0.5 before:bg-[#2E7D32]/40">
+          <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
             {timelineData.timeline.map((item: any, idx: number) => {
               const dt = new Date(item.date);
               const formattedDate = dt.toLocaleDateString("en-US", {
@@ -256,42 +344,56 @@ export default function DiseaseProgressionTimeline({
               const sevPct = item.estimated_severity?.percentage;
 
               return (
-                <div key={item.scan_id || idx} className="relative group">
-                  {/* Timeline dot */}
-                  <div className="absolute -left-6 top-3 w-4 h-4 rounded-full bg-[#12372A] border-2 border-[#52B788] group-hover:scale-110 transition-transform" />
-
-                  <div className="p-4 rounded-2xl bg-black/40 border border-white/5 hover:border-[#2E7D32]/40 transition-all flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
-                    <div className="flex items-center gap-3">
-                      {item.thumbnail_url && (
-                        <img
-                          src={item.thumbnail_url}
-                          alt="Thumbnail"
-                          className="w-12 h-12 rounded-xl object-cover border border-white/10 shrink-0"
-                        />
-                      )}
-                      <div>
-                        <div className="flex items-center gap-2">
-                          <span className="text-xs font-bold text-white">
-                            {item.disease}
-                          </span>
-                          <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-white/5 text-[#8EA396]">
-                            {formattedDate}
-                          </span>
-                        </div>
-                        <p className="text-xs text-[#8EA396] font-mono mt-0.5">
-                          Confidence: {(item.confidence * 100).toFixed(1)}% • Risk: {item.risk?.level || "Moderate"}
-                        </p>
+                <div
+                  key={item.scan_id || idx}
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "space-between",
+                    padding: "12px 16px",
+                    borderRadius: "14px",
+                    background: "#f7faf6",
+                    border: "1px solid #e2ebe0",
+                    gap: "12px",
+                  }}
+                >
+                  <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+                    <div
+                      style={{
+                        width: "36px",
+                        height: "36px",
+                        borderRadius: "10px",
+                        background: "rgba(46, 125, 50, 0.1)",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        color: "#2e7d32",
+                      }}
+                    >
+                      <Calendar size={16} />
+                    </div>
+                    <div>
+                      <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                        <span style={{ fontSize: "0.85rem", fontWeight: 700, color: "#12372a" }}>
+                          {item.disease}
+                        </span>
+                        <span style={{ fontSize: "0.72rem", padding: "2px 8px", borderRadius: "6px", background: "#e2ebe0", color: "#2d4536", fontFamily: "monospace" }}>
+                          {formattedDate}
+                        </span>
                       </div>
+                      <p style={{ margin: "2px 0 0", fontSize: "0.75rem", color: "#68756d" }}>
+                        Confidence: {(item.confidence * 100).toFixed(1)}% • Risk: {item.risk?.level || "Moderate"}
+                      </p>
                     </div>
+                  </div>
 
-                    <div className="text-right">
-                      <span className="text-xs font-mono font-bold text-white">
-                        {sevPct !== null && sevPct !== undefined ? `${sevPct}% Severity` : "Severity N/A"}
-                      </span>
-                      <span className="text-[10px] text-[#8EA396] block font-mono">
-                        {item.estimated_severity?.level || "Visual"}
-                      </span>
-                    </div>
+                  <div style={{ textAlign: "right" }}>
+                    <span style={{ fontSize: "0.85rem", fontWeight: 700, color: "#12372a", fontFamily: "monospace" }}>
+                      {sevPct !== null && sevPct !== undefined ? `${sevPct}% Severity` : "Severity N/A"}
+                    </span>
+                    <span style={{ fontSize: "0.72rem", color: "#68756d", display: "block" }}>
+                      {item.estimated_severity?.level || "Visual"}
+                    </span>
                   </div>
                 </div>
               );
@@ -299,9 +401,35 @@ export default function DiseaseProgressionTimeline({
           </div>
         </div>
       ) : (
-        <div className="p-8 text-center rounded-2xl bg-black/20 border border-dashed border-white/10 space-y-2">
-          <Tag className="w-8 h-8 text-[#8EA396] mx-auto opacity-60" />
-          <p className="text-xs text-neutral-300 font-medium">
+        /* Empty State */
+        <div
+          style={{
+            padding: "26px 18px",
+            textAlign: "center",
+            borderRadius: "16px",
+            background: "#f7faf6",
+            border: "1.5px dashed #c8d8c8",
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+            gap: "10px",
+          }}
+        >
+          <div
+            style={{
+              width: "44px",
+              height: "44px",
+              borderRadius: "50%",
+              background: "rgba(46, 125, 50, 0.1)",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              color: "#2e7d32",
+            }}
+          >
+            <Tag size={20} />
+          </div>
+          <p style={{ margin: 0, fontSize: "0.84rem", fontWeight: 600, color: "#2d4536", maxWidth: "420px", lineHeight: 1.5 }}>
             {activeTag
               ? `No prior scans found for plant tag "${activeTag}". This scan will serve as the initial baseline.`
               : "Click 'Track This Plant' above to begin tracking this specimen over subsequent weeks."}
