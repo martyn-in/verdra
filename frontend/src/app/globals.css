@@ -21,6 +21,56 @@
   --success: #1f8a46;
 
   --shadow: 0 16px 45px rgba(18, 55, 42, 0.07);
+
+  /* ===== BIOPHILIC LIVING INTERFACE DESIGN TOKENS ===== */
+  --bio-bg: #091710;
+  --bio-surface: #10261b;
+  --bio-card: rgba(16, 38, 27, 0.85);
+  --bio-card-border: rgba(82, 183, 136, 0.24);
+  --bio-moss: #1b4332;
+  --bio-leaf: #2d6a4f;
+  --bio-chlorophyll: #40916c;
+  --bio-sprout: #52b788;
+  --bio-glow: #74c69d;
+  --bio-sunlit: #f59e0b;
+  --bio-amber: #d97706;
+  --bio-terracotta: #e07a5f;
+  --bio-crimson: #ef4444;
+  --bio-glow-emerald: 0 0 35px rgba(82, 183, 136, 0.32);
+  --bio-glow-amber: 0 0 35px rgba(245, 158, 11, 0.32);
+  --bio-glow-crimson: 0 0 40px rgba(239, 68, 68, 0.38);
+}
+
+@keyframes bioBreathe {
+  0%, 100% {
+    transform: scale(1);
+    opacity: 0.85;
+  }
+  50% {
+    transform: scale(1.04);
+    opacity: 1;
+  }
+}
+
+@keyframes bioPulseGlow {
+  0%, 100% {
+    box-shadow: 0 0 15px rgba(74, 222, 128, 0.25);
+  }
+  50% {
+    box-shadow: 0 0 32px rgba(74, 222, 128, 0.55);
+  }
+}
+
+@keyframes threatPulseCritical {
+  0% {
+    box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7);
+  }
+  70% {
+    box-shadow: 0 0 0 18px rgba(239, 68, 68, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(239, 68, 68, 0);
+  }
 }
 
 * {

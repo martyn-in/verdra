@@ -531,6 +531,7 @@ export default function VerdraResultView({ diagnosisData, scanId }: ResultViewPr
         {/* Secure Expert Share Modal */}
         <ExpertShareModal
           scanId={diagnosis.id || scanId || "demo-scan"}
+          scanData={diagnosis}
           isOpen={shareModalOpen}
           onClose={() => setShareModalOpen(false)}
         />

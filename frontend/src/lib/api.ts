@@ -158,7 +158,7 @@ export async function healthCheck() {
   try {
     response = await fetch(`${baseUrl}/health`, { cache: "no-store" });
   } catch (err) {
-    await handleFetchError(err, baseUrl);
+    throw await handleFetchError(err, baseUrl);
   }
 
   if (!response.ok) {
@@ -188,7 +188,7 @@ export async function analyzeCrop(file: File, crop?: string, fieldTag?: string) 
       body: formData,
     });
   } catch (err) {
-    await handleFetchError(err, baseUrl);
+    throw await handleFetchError(err, baseUrl);
   }
 
   if (!response.ok) {
@@ -210,7 +210,7 @@ export async function checkQuality(file: File) {
       body: formData,
     });
   } catch (err) {
-    await handleFetchError(err, baseUrl);
+    throw await handleFetchError(err, baseUrl);
   }
 
   if (!response.ok) {
@@ -245,7 +245,7 @@ export async function checkImageVision(file: File): Promise<ImageCheckResult> {
       body: formData,
     });
   } catch (err) {
-    await handleFetchError(err, baseUrl);
+    throw await handleFetchError(err, baseUrl);
   }
 
   if (!response.ok) {
@@ -267,7 +267,7 @@ export async function processOpenCvScan(file: File) {
       body: formData,
     });
   } catch (err) {
-    await handleFetchError(err, baseUrl);
+    throw await handleFetchError(err, baseUrl);
   }
 
   if (!response.ok) {
@@ -288,7 +288,7 @@ export async function getSeverity(file: File) {
       body: formData,
     });
   } catch (err) {
-    await handleFetchError(err, baseUrl);
+    throw await handleFetchError(err, baseUrl);
   }
 
   if (!response.ok) {
@@ -309,7 +309,7 @@ export async function getGradcam(file: File) {
       body: formData,
     });
   } catch (err) {
-    await handleFetchError(err, baseUrl);
+    throw await handleFetchError(err, baseUrl);
   }
 
   if (!response.ok) {
@@ -337,7 +337,7 @@ export async function calculateRisk(data: {
       body: JSON.stringify(data),
     });
   } catch (err) {
-    await handleFetchError(err, baseUrl);
+    throw await handleFetchError(err, baseUrl);
   }
 
   if (!response.ok) {
@@ -357,7 +357,7 @@ export async function fetchWeather(params: { lat?: number; lon?: number; city?: 
   try {
     response = await fetch(`${baseUrl}/api/weather?${searchParams.toString()}`);
   } catch (err) {
-    await handleFetchError(err, baseUrl);
+    throw await handleFetchError(err, baseUrl);
   }
 
   if (!response.ok) {
@@ -372,7 +372,7 @@ export async function getDiseases() {
   try {
     response = await fetch(`${baseUrl}/api/diseases`);
   } catch (err) {
-    await handleFetchError(err, baseUrl);
+    throw await handleFetchError(err, baseUrl);
   }
   if (!response.ok) {
     await handleResponseError(response, "Failed to fetch diseases.");
@@ -386,7 +386,7 @@ export async function getDiseaseById(id: string) {
   try {
     response = await fetch(`${baseUrl}/api/diseases/${id}`);
   } catch (err) {
-    await handleFetchError(err, baseUrl);
+    throw await handleFetchError(err, baseUrl);
   }
   if (!response.ok) {
     await handleResponseError(response, `Failed to fetch disease ${id}.`);
@@ -404,7 +404,7 @@ export async function generateReport(data: Record<string, unknown>): Promise<Blo
       body: JSON.stringify(data),
     });
   } catch (err) {
-    await handleFetchError(err, baseUrl);
+    throw await handleFetchError(err, baseUrl);
   }
   if (!response.ok) {
     await handleResponseError(response, "Failed to generate report.");
@@ -418,7 +418,7 @@ export async function getModelPerformance() {
   try {
     response = await fetch(`${baseUrl}/api/model/performance`);
   } catch (err) {
-    await handleFetchError(err, baseUrl);
+    throw await handleFetchError(err, baseUrl);
   }
   if (!response.ok) {
     await handleResponseError(response, "Failed to fetch model performance.");
@@ -461,7 +461,7 @@ export async function batchPredict(
       body: formData,
     });
   } catch (err) {
-    await handleFetchError(err, baseUrl);
+    throw await handleFetchError(err, baseUrl);
   }
 
   if (!response.ok) {
@@ -481,7 +481,7 @@ export async function registerPlant(data: { plant_tag: string; crop?: string; fa
       body: JSON.stringify(data),
     });
   } catch (err) {
-    await handleFetchError(err, baseUrl);
+    throw await handleFetchError(err, baseUrl);
   }
   if (!response.ok) {
     await handleResponseError(response, "Failed to register plant.");
@@ -495,7 +495,7 @@ export async function getPlantTimeline(plantId: string) {
   try {
     response = await fetch(`${baseUrl}/api/plants/${encodeURIComponent(plantId)}/timeline`);
   } catch (err) {
-    await handleFetchError(err, baseUrl);
+    throw await handleFetchError(err, baseUrl);
   }
   if (!response.ok) {
     await handleResponseError(response, `Failed to fetch timeline for plant ${plantId}.`);
@@ -509,7 +509,7 @@ export async function getFieldHotspots(fieldId: string = "all") {
   try {
     response = await fetch(`${baseUrl}/api/fields/${encodeURIComponent(fieldId)}/hotspots`);
   } catch (err) {
-    await handleFetchError(err, baseUrl);
+    throw await handleFetchError(err, baseUrl);
   }
   if (!response.ok) {
     await handleResponseError(response, `Failed to fetch hotspots for field ${fieldId}.`);
@@ -529,7 +529,7 @@ export async function getFieldAlerts(fieldId: string = "all", params: { time_win
   try {
     response = await fetch(`${baseUrl}/api/fields/${encodeURIComponent(fieldId)}/alerts${query}`);
   } catch (err) {
-    await handleFetchError(err, baseUrl);
+    throw await handleFetchError(err, baseUrl);
   }
   if (!response.ok) {
     await handleResponseError(response, `Failed to fetch alerts for field ${fieldId}.`);
@@ -547,7 +547,7 @@ export async function createShareLink(scanId: string, scanData?: any, expiryDays
       body: JSON.stringify({ scan_id: scanId, scan_data: scanData, expiry_days: expiryDays }),
     });
   } catch (err) {
-    await handleFetchError(err, baseUrl);
+    throw await handleFetchError(err, baseUrl);
   }
   if (!response.ok) {
     await handleResponseError(response, "Failed to create share link.");
@@ -561,7 +561,7 @@ export async function getSharedCase(token: string) {
   try {
     response = await fetch(`${baseUrl}/api/share/${encodeURIComponent(token)}`);
   } catch (err) {
-    await handleFetchError(err, baseUrl);
+    throw await handleFetchError(err, baseUrl);
   }
   if (!response.ok) {
     await handleResponseError(response, "Shared case not found or expired.");
@@ -577,7 +577,7 @@ export async function revokeShareLink(token: string) {
       method: "DELETE",
     });
   } catch (err) {
-    await handleFetchError(err, baseUrl);
+    throw await handleFetchError(err, baseUrl);
   }
   if (!response.ok) {
     await handleResponseError(response, "Failed to revoke share link.");
@@ -593,7 +593,7 @@ export async function getScan(scanId: string): Promise<any> {
       cache: "no-store",
     });
   } catch (err) {
-    await handleFetchError(err, baseUrl);
+    throw await handleFetchError(err, baseUrl);
   }
   if (!response.ok) {
     await handleResponseError(response, "Scan record not found.");

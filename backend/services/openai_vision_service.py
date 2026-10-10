@@ -23,7 +23,10 @@ import numpy as np
 
 logger = logging.getLogger(__name__)
 
-SUPPORTED_PLANTS = {"tomato", "potato", "pepper", "bell pepper", "chilli", "capsicum"}
+SUPPORTED_PLANTS = {
+    "tomato", "potato", "pepper", "bell pepper", "chilli", "capsicum",
+    "corn", "maize", "apple", "grape"
+}
 OPENAI_API_URL = "https://api.openai.com/v1/chat/completions"
 
 
@@ -179,14 +182,18 @@ def _detect_specific_object(img: Image.Image, detected_obj: str) -> str:
     neck_w = float(np.mean(neck_slice)) if len(neck_slice) > 0 else 0.0
     body_w = float(np.mean(body_slice)) if len(body_slice) > 0 else 0.0
 
+    if detected_obj in ("animal", "dog"):
+        return "dog"
+
+    if detected_obj in ("vehicle", "document", "flower", "fruit", "human"):
+        return detected_obj
+
+    # Only subclassify 'other' or 'unknown' into specific objects like bottle or phone
     if body_w > 0.20 and neck_w > 0.04 and (body_w / max(neck_w, 0.04)) > 1.35:
         return "bottle"
 
     if (dark_ratio > 0.30 or center_dark > 0.35) and low_chroma_ratio > 0.40:
         return "phone"
-
-    if detected_obj in ("animal", "dog"):
-        return "dog"
 
     return detected_obj
 
@@ -219,19 +226,15 @@ def _detect_crop_variety(img: Image.Image, image_bytes: bytes) -> tuple[str, boo
         if aspect >= 2.7:
             return "mango", False
 
-    # Check if trained model identifies it as tomato, potato, or pepper
+    # Check if trained model identifies it as one of the supported crops
     try:
         from services import model_service
         if not model_service.is_model_loaded():
             model_service.load_model()
         pred = model_service.predict(image_bytes, crop="auto", top_k=1)
-        top_class = pred.get("class_name", "").lower()
-        if "tomato" in top_class:
-            return "tomato", True
-        elif "potato" in top_class:
-            return "potato", True
-        elif "pepper" in top_class:
-            return "pepper", True
+        top_crop = (pred.get("crop") or "").lower()
+        if top_crop in ("apple", "corn", "grape", "tomato", "potato", "pepper"):
+            return top_crop, True
     except Exception:
         pass
 

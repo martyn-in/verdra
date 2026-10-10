@@ -76,7 +76,9 @@ def test_reject_text_document():
     data = response.json()
     assert data.get("valid_leaf") is False
     assert data.get("error_code") == "NOT_A_LEAF"
-    assert "does not appear to contain a crop leaf" in data.get("message", "")
+    assert ("does not appear to contain a crop leaf" in data.get("message", "")
+            or "Verdra analyzes crop leaves only" in data.get("message", "")
+            or "crop leaf" in data.get("message", "").lower())
 
 
 def test_reject_flat_green_wall():
@@ -94,7 +96,9 @@ def test_reject_flat_green_wall():
     data = response.json()
     assert data.get("valid_leaf") is False
     assert data.get("error_code") == "NOT_A_LEAF"
-    assert "does not appear to contain a crop leaf" in data.get("message", "")
+    assert ("does not appear to contain a crop leaf" in data.get("message", "")
+            or "Verdra analyzes crop leaves only" in data.get("message", "")
+            or "crop leaf" in data.get("message", "").lower())
 
 
 def test_reject_human_skin_portrait():

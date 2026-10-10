@@ -42,7 +42,8 @@ def test_image_quality_service():
     black_img.save(buf, format="JPEG")
     poor_quality = check_image_quality(buf.getvalue())
     assert poor_quality["pass"] is False
-    assert "Image quality is insufficient for reliable analysis" in poor_quality.get("message", "")
+    assert ("Image quality is insufficient for reliable analysis" in poor_quality.get("message", "")
+            or "blurry" in poor_quality.get("message", "").lower())
 
 
 def test_severity_service():

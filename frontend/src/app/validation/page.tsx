@@ -103,7 +103,7 @@ const CLASS_SHORT_NAMES = [
 export default function ModelValidationPage() {
   const [data, setData] = useState<ModelPerformanceData>(FALLBACK_METRICS);
   const [loading, setLoading] = useState(false);
-  const [activeTab, setActiveTab] = useState<"matrix" | "classes" | "architecture">("matrix");
+  const [activeTab, setActiveTab] = useState<"matrix" | "classes" | "architecture" | "models" | "testing">("matrix");
   const [viewImageMatrix, setViewImageMatrix] = useState(false);
 
   useEffect(() => {

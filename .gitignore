@@ -57,3 +57,5 @@ cloudflared.tgz
 .vercel
 *.db
 backend/data/*.db
+dataset/non_leaf/
+dataset_multicrop/

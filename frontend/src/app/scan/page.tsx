@@ -21,9 +21,10 @@ import {
   Scan,
 } from "lucide-react";
 import VerdraSidebar from "@/components/layout/VerdraSidebar";
-import { api } from "@/lib/api";
+import { api, optimizeImageForInference } from "@/lib/api";
 import LeafCaptureOverlay from "@/components/scan/LeafCaptureOverlay";
 import BatchScanSection from "@/components/scan/BatchScanSection";
+import type { OpenCvScanResult } from "@/components/scan/OpenCvCameraScanner";
 
 const cropOptions = [
   { value: "auto", label: "Auto Detect (Recommended)" },
@@ -151,7 +152,7 @@ export default function ScanPage() {
 
     try {
       // 1. Prepare / Compress Image
-      const compressed = await compressImage(file);
+      const compressed = await optimizeImageForInference(file);
 
       // 2. Real Neural Network Inference (MobileNetV2)
       //    The backend /api/predict handles: quality check → leaf validation → disease classification

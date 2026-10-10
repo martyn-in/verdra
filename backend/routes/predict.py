@@ -210,8 +210,8 @@ async def execute_real_inference_pipeline(
             "valid_leaf": False,
             "reason": "model_error",
             "error_code": "MODEL_UNAVAILABLE",
-            "message": "Crop analysis service unavailable.",
-            "detail": "Crop analysis service unavailable.",
+            "message": "AI model not configured. Crop analysis service unavailable.",
+            "detail": "AI model not configured. Crop analysis service unavailable.",
             "diagnostics": [],
             "image_quality": {"pass": False, "quality": "Poor", "score": 0},
         }
@@ -309,10 +309,13 @@ async def execute_real_inference_pipeline(
         }
 
     # 5. Supported crop host check
-    supported_crops = {"tomato", "potato", "pepper", "pepper_bell", "bell pepper", "auto", "none", ""}
+    supported_crops = {
+        "tomato", "potato", "pepper", "pepper_bell", "bell pepper",
+        "corn", "maize", "apple", "grape", "auto", "none", ""
+    }
     clean_crop = (crop or "auto").lower().strip()
     if clean_crop not in supported_crops:
-        rejection_msg = f"Selected crop '{crop}' is not supported by the trained model (supported: Tomato, Potato, Pepper)."
+        rejection_msg = f"Selected crop '{crop}' is not supported by the trained model (supported: Tomato, Potato, Pepper, Corn, Apple, Grape)."
         logger.warning(f"Inference rejected: unsupported_crop - {rejection_msg}")
         return {
             "status": "UNSUPPORTED_CROP",
@@ -421,6 +424,7 @@ async def execute_real_inference_pipeline(
                     "Re-scan specimen in 24 hours under natural daylight.",
                 ],
             },
+            "developer_debug": pred_res.get("developer_debug", {}),
             "created_at": datetime.utcnow().isoformat()
         }
         storage_service.save_scan(uncertain_result)
@@ -586,6 +590,9 @@ async def predict_disease(
         location_accuracy=location_accuracy,
         batch_id=batch_id,
     )
+
+    if result.get("reason") == "model_error" or result.get("error_code") == "MODEL_UNAVAILABLE":
+        return JSONResponse(status_code=503, content=result)
 
     if not result.get("valid_leaf", True) or result.get("status") in ("INVALID_INPUT", "UNSUPPORTED_CROP"):
         return JSONResponse(status_code=422, content=result)

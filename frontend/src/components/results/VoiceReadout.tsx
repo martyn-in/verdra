@@ -8,6 +8,7 @@ import {
   Play,
   Square,
   Globe,
+  Loader2,
 } from "lucide-react";
 import { useTranslation, Language } from "@/context/LanguageContext";
 
@@ -34,13 +35,14 @@ export default function VoiceReadout({
   risk,
   immediateAction,
 }: VoiceReadoutProps) {
-  const { language, setLanguage, t } = useTranslation();
+  const { language, setLanguage, t, getDiseaseKnowledge } = useTranslation();
 
-  const [supported, setSupported] = useState(true);
+  const [isLoading, setIsLoading] = useState(false);
   const [isPlaying, setIsPlaying] = useState(false);
   const [isPaused, setIsPaused] = useState(false);
   const [activeVoiceLang, setActiveVoiceLang] = useState<Language>(language);
-  const [availableVoices, setAvailableVoices] = useState<SpeechSynthesisVoice[]>([]);
+  
+  const audioRef = useRef<HTMLAudioElement | null>(null);
   const utteranceRef = useRef<SpeechSynthesisUtterance | null>(null);
 
   // Sync active voice language with global language when it changes
@@ -48,49 +50,25 @@ export default function VoiceReadout({
     setActiveVoiceLang(language);
   }, [language]);
 
-  // Load voices asynchronously and listen for onvoiceschanged
-  useEffect(() => {
-    if (typeof window === "undefined" || !("speechSynthesis" in window)) {
-      setSupported(false);
-      return;
+  const stopAllAudio = useCallback(() => {
+    if (audioRef.current) {
+      audioRef.current.pause();
+      audioRef.current.currentTime = 0;
+      audioRef.current = null;
     }
-
-    const updateVoices = () => {
-      try {
-        const v = window.speechSynthesis.getVoices();
-        if (v && v.length > 0) {
-          setAvailableVoices(v);
-        }
-      } catch (e) {
-        console.warn("Could not load speech synthesis voices:", e);
-      }
-    };
-
-    updateVoices();
-    if (window.speechSynthesis.onvoiceschanged !== undefined) {
-      window.speechSynthesis.onvoiceschanged = updateVoices;
-    }
-
-    return () => {
-      if (typeof window !== "undefined" && "speechSynthesis" in window) {
-        window.speechSynthesis.onvoiceschanged = null;
-      }
-    };
-  }, []);
-
-  const stopSpeech = useCallback(() => {
     if (typeof window !== "undefined" && "speechSynthesis" in window) {
       window.speechSynthesis.cancel();
-      setIsPlaying(false);
-      setIsPaused(false);
     }
+    setIsPlaying(false);
+    setIsPaused(false);
+    setIsLoading(false);
   }, []);
 
   useEffect(() => {
     return () => {
-      stopSpeech();
+      stopAllAudio();
     };
-  }, [stopSpeech]);
+  }, [stopAllAudio]);
 
   // Safely extract confidence percentage
   const getConfidenceNumber = (): number => {
@@ -114,10 +92,11 @@ export default function VoiceReadout({
     if (targetLang === "te") {
       const trans: Record<string, string> = {
         Low: "తక్కువ",
-        Mild: "తక్కువ",
+        Mild: "తేలికపాటి",
         Moderate: "మధ్యస్థం",
         High: "తీవ్రం",
         Severe: "అత్యంత తీవ్రం",
+        Healthy: "ఆరోగ్యకరం",
       };
       const localized = trans[raw] || raw;
       return pct !== null ? `${pct}% (${localized})` : localized;
@@ -128,6 +107,7 @@ export default function VoiceReadout({
         Moderate: "मध्यम",
         High: "उच्च",
         Severe: "गंभीर",
+        Healthy: "स्वस्थ",
       };
       const localized = trans[raw] || raw;
       return pct !== null ? `${pct}% (${localized})` : localized;
@@ -147,16 +127,16 @@ export default function VoiceReadout({
 
     if (targetLang === "te") {
       const trans: Record<string, string> = {
-        Low: "తక్కువ",
-        Moderate: "మధ్యస్థం",
+        Low: "తక్కువ ప్రమాదం",
+        Moderate: "మధ్యస్థ ప్రమాదం",
         High: "అధిక ప్రమాదం",
-        Critical: "తీవ్ర ప్రమాదం",
+        Critical: "తీవ్రమైన ప్రమాదం",
       };
       return trans[raw] || raw;
     } else if (targetLang === "hi") {
       const trans: Record<string, string> = {
-        Low: "कम",
-        Moderate: "मध्यम",
+        Low: "कम जोखिम",
+        Moderate: "मध्यम जोखिम",
         High: "उच्च जोखिम",
         Critical: "गंभीर जोखिम",
       };
@@ -166,127 +146,192 @@ export default function VoiceReadout({
     return raw;
   };
 
+  // Crop translation
+  const getLocalizedCrop = (targetLang: Language): string => {
+    const c = (crop || "").toLowerCase();
+    if (targetLang === "te") {
+      if (c.includes("tomato")) return "టమాటా";
+      if (c.includes("potato")) return "బంగాళాదుంప";
+      if (c.includes("pepper")) return "మిరప";
+      return crop || "పంట";
+    }
+    if (targetLang === "hi") {
+      if (c.includes("tomato")) return "टमाटर";
+      if (c.includes("potato")) return "आलू";
+      if (c.includes("pepper")) return "शिमला मिर्च";
+      return crop || "फसल";
+    }
+    return crop || "Crop";
+  };
+
+  // Disease translation
+  const getLocalizedDisease = (targetLang: Language): string => {
+    const knowledge = getDiseaseKnowledge(disease);
+    if (targetLang === "te") {
+      if (/healthy/i.test(disease)) return "ఆరోగ్యకరమైన ఆకు";
+      if (knowledge?.canonical_name) {
+        if (/late blight/i.test(disease)) return "లేట్ బ్లైట్ తెగులు";
+        if (/early blight/i.test(disease)) return "ఎర్లీ బ్లైట్ తెగులు";
+        if (/bacterial spot/i.test(disease)) return "బాక్టీరియల్ ఆకుమచ్చ తెగులు";
+        return knowledge.canonical_name;
+      }
+      return (disease || "").replace(/_/g, " ");
+    }
+    if (targetLang === "hi") {
+      if (/healthy/i.test(disease)) return "स्वस्थ पत्ती";
+      if (/late blight/i.test(disease)) return "झुलसा रोग (लेट ब्लाइट)";
+      if (/early blight/i.test(disease)) return "अगेती झुलसा (अर्घ ब्लाइट)";
+      if (/bacterial spot/i.test(disease)) return "जीवाणु धब्बा रोग";
+      return (disease || "").replace(/_/g, " ");
+    }
+    return (disease || "Leaf Condition").replace(/_/g, " ");
+  };
+
   // Construct spoken script
   const buildSpokenScript = (targetLang: Language): { text: string; langCode: string } => {
     const confPct = getConfidenceNumber();
-    const cleanDisease = (disease || "Leaf Issue").replace(/_/g, " ");
+    const locCrop = getLocalizedCrop(targetLang);
+    const locDisease = getLocalizedDisease(targetLang);
     const sevText = getSeverityText(targetLang);
     const riskText = getRiskText(targetLang);
+    const knowledge = getDiseaseKnowledge(disease);
 
     if (targetLang === "te") {
-      const action = immediateAction || "సోకిన ఆకులను కత్తిరించండి మరియు తేమను తగ్గించండి.";
+      const action =
+        knowledge?.immediate_actions?.[0] ||
+        immediateAction ||
+        "సోకిన ఆకులను కత్తిరించండి మరియు తేమను తగ్గించండి.";
       return {
-        text: `వెర్డ్రా పంట రోగ నిర్ధారణ నివేదిక. పంట: ${crop || "పంట"}. గుర్తింపు: ${cleanDisease}. ఖచ్చితత్వం: ${confPct} శాతం. వ్యాధి తీవ్రత: ${sevText}. వ్యాప్తి ప్రమాదం: ${riskText}. తక్షణ సలహా: ${action}`,
-        langCode: "te-IN",
+        text: `వెర్డ్రా పంట రోగ నిర్ధారణ నివేదిక. పంట: ${locCrop}. నిర్ధారణ: ${locDisease}. ఖచ్చితత్వం: ${confPct} శాతం. వ్యాధి తీవ్రత: ${sevText}. వ్యాప్తి ప్రమాదం: ${riskText}. తక్షణ సలహా: ${action}`,
+        langCode: "te",
       };
     } else if (targetLang === "hi") {
-      const action = immediateAction || "संक्रमित पत्तियों को छाँटें और नमी को नियंत्रित करें।";
+      const action =
+        knowledge?.immediate_actions?.[0] ||
+        immediateAction ||
+        "संक्रमित पत्तियों को छाँटें और नमी को नियंत्रित करें।";
       return {
-        text: `वेर्ड्रा फसल स्वास्थ्य रिपोर्ट। फसल: ${crop || "फसल"}। रोग का नाम: ${cleanDisease}। सटीकता: ${confPct} प्रतिशत। गंभीरता: ${sevText}। फैलाव जोखिम: ${riskText}। तत्काल सलाह: ${action}`,
-        langCode: "hi-IN",
+        text: `वेर्ड्रा फसल स्वास्थ्य रिपोर्ट। फसल: ${locCrop}। रोग: ${locDisease}। सटीकता: ${confPct} प्रतिशत। गंभीरता: ${sevText}। फैलाव जोखिम: ${riskText}। तत्काल सलाह: ${action}`,
+        langCode: "hi",
       };
     } else {
-      const action = immediateAction || "Inspect foliage and prune affected leaves immediately.";
+      const action =
+        immediateAction ||
+        knowledge?.immediate_actions?.[0] ||
+        "Inspect foliage and prune affected leaves immediately.";
       return {
-        text: `Verdra crop health analysis. Target crop: ${crop || "Crop"}. Diagnosis: ${cleanDisease}. Confidence: ${confPct} percent. Severity: ${sevText}. Spread risk: ${riskText}. Immediate action: ${action}`,
-        langCode: "en-IN",
+        text: `Verdra crop health analysis. Target crop: ${locCrop}. Diagnosis: ${locDisease}. Confidence: ${confPct} percent. Severity: ${sevText}. Spread risk: ${riskText}. Immediate action: ${action}`,
+        langCode: "en",
       };
     }
   };
 
-  const handleSpeak = (targetLang: Language = activeVoiceLang) => {
+  const handleSpeak = async (targetLang: Language = activeVoiceLang) => {
+    stopAllAudio();
+    setActiveVoiceLang(targetLang);
+    setIsLoading(true);
+
+    const { text, langCode } = buildSpokenScript(targetLang);
+
+    // Primary: Native Vernacular Audio via /api/tts endpoint
+    try {
+      const ttsUrl = `/api/tts?text=${encodeURIComponent(text)}&lang=${langCode}`;
+      const audio = new Audio(ttsUrl);
+      audioRef.current = audio;
+
+      audio.oncanplay = () => {
+        setIsLoading(false);
+      };
+
+      audio.onplay = () => {
+        setIsPlaying(true);
+        setIsPaused(false);
+        setIsLoading(false);
+      };
+
+      audio.onended = () => {
+        setIsPlaying(false);
+        setIsPaused(false);
+        audioRef.current = null;
+      };
+
+      audio.onerror = (e) => {
+        console.warn("Audio element error, falling back to browser synthesis:", e);
+        fallbackSpeechSynthesis(text, langCode);
+      };
+
+      await audio.play();
+      return;
+    } catch (err) {
+      console.warn("Audio play failed, falling back to speech synthesis:", err);
+      fallbackSpeechSynthesis(text, langCode);
+    }
+  };
+
+  const fallbackSpeechSynthesis = (text: string, langCode: string) => {
     if (typeof window === "undefined" || !("speechSynthesis" in window)) {
-      setSupported(false);
+      setIsLoading(false);
+      setIsPlaying(false);
       return;
     }
 
-    window.speechSynthesis.cancel();
-    setActiveVoiceLang(targetLang);
+    try {
+      window.speechSynthesis.cancel();
+      const utterance = new SpeechSynthesisUtterance(text);
+      utteranceRef.current = utterance;
 
-    const { text, langCode } = buildSpokenScript(targetLang);
-    const utterance = new SpeechSynthesisUtterance(text);
-    utteranceRef.current = utterance;
+      const voices = window.speechSynthesis.getVoices();
+      const match =
+        voices.find((v) => v.lang.toLowerCase().startsWith(langCode)) ||
+        voices.find((v) => v.lang.toLowerCase().includes("in")) ||
+        voices[0];
 
-    const voices = availableVoices.length > 0 ? availableVoices : window.speechSynthesis.getVoices();
+      if (match) utterance.voice = match;
+      utterance.rate = 0.92;
 
-    // Priority matching for best natural voice
-    const matchingVoice =
-      voices.find((v) => v.lang.replace(/_/g, "-").toLowerCase() === langCode.toLowerCase()) ||
-      voices.find((v) => v.lang.toLowerCase().startsWith(langCode.slice(0, 2).toLowerCase())) ||
-      voices.find((v) => v.lang.replace(/_/g, "-").toLowerCase() === "en-in") ||
-      voices[0];
+      utterance.onstart = () => {
+        setIsPlaying(true);
+        setIsPaused(false);
+        setIsLoading(false);
+      };
 
-    if (matchingVoice) {
-      utterance.voice = matchingVoice;
-      utterance.lang = matchingVoice.lang;
-    } else {
-      utterance.lang = langCode;
-    }
+      utterance.onend = () => {
+        setIsPlaying(false);
+        setIsPaused(false);
+      };
 
-    utterance.rate = 0.92; // Natural, clear pacing for field farmers
-    utterance.pitch = 1.0;
+      utterance.onerror = () => {
+        setIsPlaying(false);
+        setIsPaused(false);
+        setIsLoading(false);
+      };
 
-    const keepAliveRef = { current: null as any };
-
-    utterance.onstart = () => {
-      setIsPlaying(true);
-      setIsPaused(false);
-      // Chrome audio keep-alive to prevent premature 15s pause bug
-      keepAliveRef.current = setInterval(() => {
-        if (typeof window !== "undefined" && "speechSynthesis" in window) {
-          if (window.speechSynthesis.speaking && !window.speechSynthesis.paused) {
-            window.speechSynthesis.pause();
-            window.speechSynthesis.resume();
-          }
-        }
-      }, 9000);
-    };
-
-    const cleanup = () => {
-      if (keepAliveRef.current) {
-        clearInterval(keepAliveRef.current);
-        keepAliveRef.current = null;
-      }
+      window.speechSynthesis.speak(utterance);
+    } catch {
+      setIsLoading(false);
       setIsPlaying(false);
-      setIsPaused(false);
-      if (typeof window !== "undefined") {
-        delete (window as any).__verdraActiveUtterance;
-      }
-    };
-
-    utterance.onend = cleanup;
-    utterance.onerror = cleanup;
-
-    // Prevent GC in Chromium engines
-    if (typeof window !== "undefined") {
-      (window as any).__verdraActiveUtterance = utterance;
     }
-
-    window.speechSynthesis.speak(utterance);
   };
 
   const handlePause = () => {
-    if (typeof window !== "undefined" && "speechSynthesis" in window) {
+    if (audioRef.current && !audioRef.current.paused) {
+      audioRef.current.pause();
+      setIsPaused(true);
+    } else if (typeof window !== "undefined" && "speechSynthesis" in window && window.speechSynthesis.speaking) {
       window.speechSynthesis.pause();
       setIsPaused(true);
     }
   };
 
   const handleResume = () => {
-    if (typeof window !== "undefined" && "speechSynthesis" in window) {
+    if (audioRef.current && audioRef.current.paused) {
+      audioRef.current.play();
+      setIsPaused(false);
+    } else if (typeof window !== "undefined" && "speechSynthesis" in window && window.speechSynthesis.paused) {
       window.speechSynthesis.resume();
       setIsPaused(false);
     }
   };
-
-  if (!supported) {
-    return (
-      <div className="flex items-center gap-2 text-sm text-[#8EA396]">
-        <VolumeX className="w-5 h-5 text-neutral-400" />
-        <span>{t("result.speech_unsupported", "Voice read-out is unavailable on this device.")}</span>
-      </div>
-    );
-  }
 
   return (
     <div
@@ -302,7 +347,7 @@ export default function VoiceReadout({
         boxShadow: "0 2px 8px rgba(18, 55, 42, 0.05)",
       }}
     >
-      {!isPlaying ? (
+      {!isPlaying && !isLoading ? (
         <button
           type="button"
           onClick={() => handleSpeak(activeVoiceLang)}
@@ -332,6 +377,29 @@ export default function VoiceReadout({
               : "Read Aloud (Voice)"}
           </span>
         </button>
+      ) : isLoading ? (
+        <div
+          style={{
+            display: "inline-flex",
+            alignItems: "center",
+            gap: 8,
+            padding: "10px 18px",
+            background: "#1b4332",
+            color: "#ffffff",
+            borderRadius: 12,
+            fontSize: 13,
+            fontWeight: 700,
+          }}
+        >
+          <Loader2 size={17} className="animate-spin" color="#4ade80" />
+          <span>
+            {activeVoiceLang === "te"
+              ? "వాయిస్ సిద్ధమవుతోంది..."
+              : activeVoiceLang === "hi"
+              ? "आवाज़ लोड हो रही है..."
+              : "Generating Audio..."}
+          </span>
+        </div>
       ) : (
         <div style={{ display: "inline-flex", alignItems: "center", gap: 8 }}>
           {isPaused ? (
@@ -381,7 +449,7 @@ export default function VoiceReadout({
 
           <button
             type="button"
-            onClick={stopSpeech}
+            onClick={stopAllAudio}
             style={{
               display: "inline-flex",
               alignItems: "center",

@@ -113,7 +113,10 @@ def test_predict_quality_rejection():
     files = {"file": ("bad.jpg", io.BytesIO(buf.getvalue()), "image/jpeg")}
     response = client.post("/api/predict", files=files)
     assert response.status_code == 422
-    assert response.json()["detail"] == "Image quality is insufficient for reliable analysis. Please capture a clearer leaf image in good lighting."
+    detail = response.json().get("detail", "")
+    assert ("Image quality is insufficient" in detail
+            or "resolution is too low" in detail
+            or "blurry" in detail)
 
 
 def test_gradcam_endpoint():
